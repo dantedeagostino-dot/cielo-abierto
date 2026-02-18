@@ -246,8 +246,5 @@ export async function POST(req: Request) {
         },
     });
 
-    console.log('[Backend] streamText result keys:', Object.keys(result));
-    // console.log('[Backend] streamText result:', result);
-
-    return result.toTextStreamResponse();
+    return result.toUIMessageStreamResponse();
 }
