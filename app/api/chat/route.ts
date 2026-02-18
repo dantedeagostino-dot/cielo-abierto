@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     });
 
     const result = await streamText({
-        model: google('gemini-1.5-flash'),
+        model: google('gemini-1.5-flash-001'),
         messages: coreMessages,
         system: `You are 'Cielo Abierto', an intelligent assistant dedicated to democratizing NASA's scientific data.
     You have access to real-time tools to fetch data about:
