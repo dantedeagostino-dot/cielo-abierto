@@ -262,9 +262,13 @@ export async function POST(req: Request) {
                 description: 'Get latest weather report from Elysium Planitia, Mars (InSight mission).',
                 parameters: z.object({}),
                 execute: async () => {
+                    console.log('--- Executing getMarsWeather ---');
                     try {
-                        return await getMarsWeather();
+                        const result = await getMarsWeather();
+                        console.log('--- getMarsWeather result:', JSON.stringify(result).substring(0, 100));
+                        return result;
                     } catch (e: any) {
+                        console.error('--- getMarsWeather error:', e);
                         return { error: e.message };
                     }
                 },
