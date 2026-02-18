@@ -7,8 +7,10 @@ import SpaceBackground from '@/components/ui/space-background';
 import { useRef, useEffect, useState } from 'react';
 
 export default function Home() {
-  const { messages, append, isLoading } = useChat() as any; // Cast to any to avoid type issues with potentially missing helpers in this version
+  const { messages, status, sendMessage } = useChat() as any;
   const [input, setInput] = useState('');
+
+  const isLoading = status === 'submitted' || status === 'streaming';
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setInput(e.target.value);
@@ -19,18 +21,16 @@ export default function Home() {
     if (!input.trim()) return;
 
     try {
-      await append({
-        role: 'user',
-        content: input,
-      });
-      setInput(''); // Clear input after sending
+      await sendMessage({ role: 'user', content: input });
+      setInput('');
     } catch (error) {
       console.error('Error sending message:', error);
     }
   };
 
   // Log for debugging
-  console.log('useChat values (manual):', { input, isLoading, messagesLength: messages?.length });
+  // Log for debugging
+  console.log('useChat values (v5 fix):', { input, status, isLoading, messagesLength: messages?.length });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -74,8 +74,12 @@ export default function Home() {
           </div>
         )}
 
-        {messages.map((m: any) => (
-          <MessageBubble key={m.id} role={m.role === 'user' ? 'user' : 'assistant'} content={m.content} />
+        {messages?.map((m: any) => (
+          <MessageBubble
+            key={m.id}
+            role={m.role === 'user' ? 'user' : 'assistant'}
+            content={m.content ?? m.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('') ?? ''}
+          />
         ))}
 
         {isLoading && (
