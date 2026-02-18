@@ -26,10 +26,45 @@ export async function POST(req: Request) {
         return new Response('Missing GOOGLE_API_KEY environment variable', { status: 500 });
     }
 
-    const coreMessages = messages.map((m: any) => ({
-        role: m.role,
-        content: m.content,
-    }));
+    const coreMessages: any[] = [];
+    for (const m of messages) {
+        if (m.role === 'user' || m.role === 'system') {
+            coreMessages.push({ role: m.role, content: m.content });
+        } else if (m.role === 'assistant') {
+            const content: any[] = [];
+            if (m.content) content.push({ type: 'text', text: m.content });
+
+            if (m.toolInvocations) {
+                for (const t of m.toolInvocations) {
+                    content.push({
+                        type: 'tool-call',
+                        toolCallId: t.toolCallId,
+                        toolName: t.toolName,
+                        args: t.args
+                    });
+                }
+            }
+            coreMessages.push({ role: 'assistant', content });
+
+            // Handle tool results which are separate messages in CoreMessage format
+            if (m.toolInvocations) {
+                const toolResults: any[] = [];
+                for (const t of m.toolInvocations) {
+                    if ('result' in t) {
+                        toolResults.push({
+                            type: 'tool-result',
+                            toolCallId: t.toolCallId,
+                            toolName: t.toolName,
+                            result: t.result
+                        });
+                    }
+                }
+                if (toolResults.length > 0) {
+                    coreMessages.push({ role: 'tool', content: toolResults });
+                }
+            }
+        }
+    }
 
     const google = createGoogleGenerativeAI({
         apiKey: process.env.GOOGLE_API_KEY,
