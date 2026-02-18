@@ -60,6 +60,7 @@ export async function POST(req: Request) {
     For Mars photos, if no camera is specified, find a diverse set. Sol defaults to 1000 if not specified.
     
     Format your responses in Markdown. use clear headings and bullet points.`,
+        maxSteps: 10,
 
         tools: {
             getDataFromAPOD: tool({
