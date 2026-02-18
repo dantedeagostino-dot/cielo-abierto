@@ -40,7 +40,7 @@ export default function SpaceBackground() {
                     }}
                 />
             ))}
-            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-5 mix-blend-overlay"></div>
+
         </div>
     );
 }

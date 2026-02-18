@@ -12,6 +12,11 @@ export const maxDuration = 60; // Allow longer timeouts for API calls
 export async function POST(req: Request) {
     const { messages } = await req.json();
 
+    const apiKey = process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+        return new Response('Missing GOOGLE_API_KEY environment variable', { status: 500 });
+    }
+
     const coreMessages = messages.map((m: any) => ({
         role: m.role,
         content: m.content,
