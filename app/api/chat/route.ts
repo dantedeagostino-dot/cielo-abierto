@@ -1,5 +1,5 @@
 import { google } from '@ai-sdk/google';
-import { convertToCoreMessages, streamText, tool } from 'ai';
+import { streamText, tool } from 'ai';
 import { z } from 'zod';
 import { getAPOD } from '@/lib/nasa/apod';
 import { getNeoFeed } from '@/lib/nasa/neows';
@@ -12,9 +12,14 @@ export const maxDuration = 60; // Allow longer timeouts for API calls
 export async function POST(req: Request) {
     const { messages } = await req.json();
 
+    const coreMessages = messages.map((m: any) => ({
+        role: m.role,
+        content: m.content,
+    }));
+
     const result = await streamText({
         model: google('gemini-1.5-flash-latest'),
-        messages: convertToCoreMessages(messages),
+        messages: coreMessages,
         system: `You are 'Cielo Abierto', an intelligent assistant dedicated to democratizing NASA's scientific data.
     You have access to real-time tools to fetch data about:
     - Astronomy Picture of the Day (APOD)
@@ -35,7 +40,7 @@ export async function POST(req: Request) {
                 parameters: z.object({
                     date: z.string().optional().describe('The date in YYYY-MM-DD format. Defaults to today if not provided.'),
                 }),
-                execute: async ({ date }: { date?: string }) => {
+                execute: async ({ date }: any) => {
                     try {
                         return await getAPOD(date);
                     } catch (e: any) {
@@ -50,7 +55,7 @@ export async function POST(req: Request) {
                     startDate: z.string().describe('Start date in YYYY-MM-DD format'),
                     endDate: z.string().describe('End date in YYYY-MM-DD format. Must be within 7 days of startDate.'),
                 }),
-                execute: async ({ startDate, endDate }: { startDate: string; endDate: string }) => {
+                execute: async ({ startDate, endDate }: any) => {
                     try {
                         return await getNeoFeed(startDate, endDate);
                     } catch (e: any) {
@@ -66,7 +71,7 @@ export async function POST(req: Request) {
                     sol: z.number().optional().default(1000).describe('The Martian Sol (day) to fetch photos from.'),
                     camera: z.enum(['FHAZ', 'RHAZ', 'MAST', 'CHEMCAM', 'MAHLI', 'MARDI', 'NAVCAM', 'PANCAM', 'MINITES']).optional().describe('Specific camera to filter by'),
                 }),
-                execute: async ({ rover, sol, camera }: { rover: 'curiosity' | 'opportunity' | 'spirit' | 'perseverance'; sol?: number; camera?: any }) => {
+                execute: async ({ rover, sol, camera }: any) => {
                     try {
                         return await getMarsRoverPhotos(rover, sol, camera);
                     } catch (e: any) {
@@ -81,7 +86,7 @@ export async function POST(req: Request) {
                     keyword: z.string().describe('Search keyword (e.g., "temperature", "precipitation", "ozone")'),
                     limit: z.number().optional().default(5).describe('Number of results to return'),
                 }),
-                execute: async ({ keyword, limit }: { keyword: string; limit?: number }) => {
+                execute: async ({ keyword, limit }: any) => {
                     try {
                         return await searchEarthData(keyword, limit);
                     } catch (e: any) {
