@@ -1,36 +1,24 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Proyecto Cielo Abierto 🌌
 
-## Getting Started
+**Cielo Abierto** es una plataforma innovadora diseñada para democratizar el acceso a la información espacial y científica de la NASA. Utilizando la potencia de la inteligencia artificial **Google Gemini**, el proyecto permite a cualquier usuario interactuar con datos complejos del universo a través de un chat natural y amigable.
 
-First, run the development server:
+## 🚀 Misión
+Romper las barreras técnicas que existen entre los datos abiertos de la NASA y el público general. Cielo Abierto actúa como un "copiloto espacial", traduciendo consultas cotidianas en búsquedas precisas a través de múltiples APIs científicas.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🧠 Características Principales
+- **Chat Inteligente con Gemini**: Pregunta sobre el cosmos y recibe respuestas enriquecidas con datos reales.
+- **Imagen Astronómica del Día (APOD)**: Visualiza y entiende la foto diaria destacada por la NASA.
+- **Exploración de Marte**: Accede a las últimas imágenes de los rovers Curiosity, Opportunity, Spirit y Perseverance.
+- **Monitor de Asteroides (NeoWs)**: Mantente informado sobre los objetos cercanos a la Tierra y sus riesgos.
+- **Datos Científicos Terrestres (CMR)**: Busca colecciones de datos sobre el clima y la atmósfera terrestre.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Tecnologías
+- **Frontend**: Next.js 14 (App Router), Tailwind CSS, Framer Motion.
+- **IA**: Google Gemini 1.5 Flash (via Vercel AI SDK).
+- **Datos**: NASA Open APIs (APOD, NeoWs, Mars Rover Photos, CMR).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 👨‍💻 Creador
+Desarrollado con pasión por **Dante De Agostino**.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+*Este proyecto es parte del Laboratorio Colossus.*
