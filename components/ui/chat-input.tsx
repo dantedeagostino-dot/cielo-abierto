@@ -55,9 +55,10 @@ export default function ChatInput({ value, onChange, onSend, onSubmit, disabled,
         >
             <input
                 type="text"
+                name="prompt"
                 value={inputValue}
                 onChange={handleChange}
-                placeholder={placeholder || "Preguntale al universo..."}
+                placeholder={placeholder || "Pregúntale al cosmos..."}
                 className="flex-1 bg-transparent px-4 py-3 text-white placeholder-slate-400 focus:outline-none"
                 disabled={disabled}
             />

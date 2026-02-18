@@ -8,6 +8,7 @@ import { useRef, useEffect } from 'react';
 
 export default function Home() {
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat();
+  console.log('useChat values:', { input, isLoading, hasHandleSubmit: !!handleSubmit });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -46,7 +47,7 @@ export default function Home() {
               Explora el Universo
             </h1>
             <p className="text-lg max-w-md">
-              Soy tu copiloto en esta misión. Pregúntame sobre la foto astronómica del día, asteroides cercanos o fotos de Marte.
+              Soy tu copiloto en esta misión. Puedo acceder a imágenes de la Tierra (EPIC), clima de Marte (InSight), exoplanetas, patentes de la NASA y mucho más.
             </p>
           </div>
         )}
@@ -72,6 +73,6 @@ export default function Home() {
           placeholder="Pregúntale al cosmos..."
         />
       </div>
-    </main>
+    </main >
   );
 }
