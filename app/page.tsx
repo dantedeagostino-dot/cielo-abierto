@@ -7,7 +7,10 @@ import SpaceBackground from '@/components/ui/space-background';
 import { useRef, useEffect, useState } from 'react';
 
 export default function Home() {
-  const { messages, status, sendMessage } = useChat() as any;
+  const { messages, status, sendMessage } = useChat({
+    onError: (error) => console.error('[Frontend] useChat error:', error),
+    onFinish: (message) => console.log('[Frontend] useChat finished:', message),
+  }) as any;
   const [input, setInput] = useState('');
 
   const isLoading = status === 'submitted' || status === 'streaming';
@@ -28,7 +31,6 @@ export default function Home() {
     }
   };
 
-  // Log for debugging
   // Log for debugging
   console.log('useChat values (v5 fix):', { input, status, isLoading, messagesLength: messages?.length });
   const messagesEndRef = useRef<HTMLDivElement>(null);
