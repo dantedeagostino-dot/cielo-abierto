@@ -4,11 +4,33 @@ import { useChat } from '@ai-sdk/react';
 import ChatInput from '@/components/ui/chat-input';
 import MessageBubble from '@/components/ui/message-bubble';
 import SpaceBackground from '@/components/ui/space-background';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 
 export default function Home() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat();
-  console.log('useChat values:', { input, isLoading, hasHandleSubmit: !!handleSubmit });
+  const { messages, append, isLoading } = useChat() as any; // Cast to any to avoid type issues with potentially missing helpers in this version
+  const [input, setInput] = useState('');
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+  };
+
+  const handleSubmit = async (e?: { preventDefault?: () => void }) => {
+    e?.preventDefault?.();
+    if (!input.trim()) return;
+
+    try {
+      await append({
+        role: 'user',
+        content: input,
+      });
+      setInput(''); // Clear input after sending
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  };
+
+  // Log for debugging
+  console.log('useChat values (manual):', { input, isLoading, messagesLength: messages?.length });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
