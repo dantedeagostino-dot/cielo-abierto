@@ -1,7 +1,6 @@
 'use client';
 
-import { useChat } from 'ai/react';
-import type { Message } from 'ai/react'; // Trying implicit export or just relying on useChat's return type inferred
+import { useChat } from '@ai-sdk/react';
 import ChatInput from '@/components/ui/chat-input';
 import MessageBubble from '@/components/ui/message-bubble';
 import SpaceBackground from '@/components/ui/space-background';
