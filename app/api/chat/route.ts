@@ -1,4 +1,4 @@
-import { google } from '@ai-sdk/google';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { streamText, tool } from 'ai';
 import { z } from 'zod';
 import { getAPOD } from '@/lib/nasa/apod';
@@ -30,6 +30,10 @@ export async function POST(req: Request) {
         role: m.role,
         content: m.content,
     }));
+
+    const google = createGoogleGenerativeAI({
+        apiKey: process.env.GOOGLE_API_KEY,
+    });
 
     const result = await streamText({
         model: google('gemini-1.5-flash-latest'),
