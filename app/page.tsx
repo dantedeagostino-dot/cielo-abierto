@@ -72,6 +72,7 @@ export default function Home() {
             key={m.id}
             role={m.role === 'user' ? 'user' : 'assistant'}
             content={m.content ?? m.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('') ?? ''}
+            toolInvocations={m.toolInvocations}
           />
         ))}
 
