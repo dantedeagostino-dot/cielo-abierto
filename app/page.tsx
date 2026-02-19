@@ -94,6 +94,9 @@ export default function Home() {
         />
         <footer className="w-full text-center text-[10px] md:text-xs text-white/40 font-mono">
           Powered by Nasa and <span className="font-bold text-blue-400">ColossusLab.tech</span>
+          <span className="opacity-20 ml-2">
+            Tools: {messages[messages.length - 1]?.toolInvocations?.length || 0}
+          </span>
         </footer>
       </div>
     </main >
