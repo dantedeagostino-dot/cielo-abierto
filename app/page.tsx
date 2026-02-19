@@ -5,8 +5,11 @@ import ChatInput from '@/components/ui/chat-input';
 import MessageBubble from '@/components/ui/message-bubble';
 import SpaceBackground from '@/components/ui/space-background';
 import { useRef, useEffect, useState } from 'react';
+import SplashScreen from '@/components/ui/splash-screen';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export default function Home() {
+  const [showSplash, setShowSplash] = useState(true);
   const { messages, status, sendMessage } = useChat({
     onError: (error) => console.error('[Frontend] useChat error:', error),
     onFinish: (message) => console.log('[Frontend] useChat finished:', message),
@@ -45,6 +48,12 @@ export default function Home() {
 
   return (
     <main className="flex h-[100dvh] flex-col items-center justify-between p-4 md:p-24 relative overflow-hidden">
+      <AnimatePresence>
+        {showSplash && (
+          <SplashScreen onFinish={() => setShowSplash(false)} />
+        )}
+      </AnimatePresence>
+
       <SpaceBackground />
 
       <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex mb-4 shrink-0">
