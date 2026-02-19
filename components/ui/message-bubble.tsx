@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { User, Bot, Loader2, FileCode2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import ToolResult from './tool-result';
 
 interface MessageBubbleProps {
     role: 'user' | 'assistant';
@@ -30,16 +31,22 @@ export default function MessageBubble({ role, content, toolInvocations }: Messag
                 {hasTools && (
                     <div className="flex flex-col gap-2 w-full">
                         {toolInvocations?.map((tool: any) => (
-                            <div key={tool.toolCallId} className="flex items-center gap-2 text-xs text-blue-300/70 bg-blue-900/20 px-3 py-2 rounded-lg border border-blue-500/20">
-                                {tool.state === 'result' ? (
-                                    <FileCode2 className="h-3 w-3" />
-                                ) : (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
+                            <div key={tool.toolCallId} className="flex flex-col gap-1 w-full">
+                                <div className="flex items-center gap-2 text-xs text-blue-300/70 bg-blue-900/20 px-3 py-2 rounded-lg border border-blue-500/20 w-fit">
+                                    {tool.state === 'result' ? (
+                                        <FileCode2 className="h-3 w-3" />
+                                    ) : (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                    )}
+                                    <span className="font-mono">{tool.toolName}</span>
+                                    <span className="opacity-50">
+                                        {tool.state === 'result' ? 'completado' : 'procesando...'}
+                                    </span>
+                                </div>
+
+                                {tool.state === 'result' && (
+                                    <ToolResult toolName={tool.toolName} result={tool.result} />
                                 )}
-                                <span className="font-mono">{tool.toolName}</span>
-                                <span className="opacity-50">
-                                    {tool.state === 'result' ? 'completado' : 'procesando...'}
-                                </span>
                             </div>
                         ))}
                     </div>
