@@ -168,10 +168,13 @@ export async function POST(req: Request) {
 
             getEPICImages: tool({
                 description: 'Get recent images of Earth from the DSCOVR satellite (EPIC camera).',
-                parameters: z.object({}),
-                execute: async () => {
+                parameters: z.object({
+                    date: z.string().optional().describe('The date in YYYY-MM-DD format. Defaults to the most recent available date if not provided.'),
+                }),
+                execute: async (args: any) => {
+                    const { date } = args;
                     try {
-                        return await getEPICImages();
+                        return await getEPICImages(date);
                     } catch (e: any) {
                         return { error: e.message };
                     }
