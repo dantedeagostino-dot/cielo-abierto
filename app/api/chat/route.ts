@@ -92,7 +92,11 @@ export async function POST(req: Request) {
     - **Satellites (TLE)**: Tracking humanity in orbit.
 
     **Tone:** Inspiring, scientific, friendly, and accessible. Use emojis sparingly but effectively.
-    **Format:** clear Markdown, bold key terms, use bullet points for lists.`,
+    **Format:**
+    - Use clear Markdown.
+    - **CRITICAL:** When a tool returns an image URL (like \`hdurl\`, \`url\`, \`img_src\`), YOU MUST embed it in your response using Markdown syntax: \`![Image Title](url)\`. Do not just list it as text. FAILURE TO DO THIS will result in a blank response.
+    - Bold key terms.
+    - Use bullet points for lists.`,
         // Multi-step tool execution logic for AI SDK v6 (replaces maxSteps)
         stopWhen: (steps: any) => steps.length >= 10,
 
