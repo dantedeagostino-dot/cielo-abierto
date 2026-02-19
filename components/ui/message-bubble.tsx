@@ -64,7 +64,42 @@ export default function MessageBubble({ role, content, toolInvocations }: Messag
                         <div className="prose prose-invert prose-sm">
                             {/* Only render content if it exists, otherwise show a fallback if no tools either */}
                             {content ? (
-                                <p className="whitespace-pre-wrap">{content}</p>
+                                <ReactMarkdown
+                                    components={{
+                                        // Override link rendering to show images inline if they are image URLs
+                                        a: ({ node, ...props }) => {
+                                            const isImage = props.href?.match(/\.(jpeg|jpg|gif|png)$/i);
+                                            if (isImage) {
+                                                return (
+                                                    <span className="block my-2 rounded-lg overflow-hidden border border-white/10">
+                                                        <img
+                                                            src={props.href}
+                                                            alt={String(props.children) || 'Image'}
+                                                            className="w-full h-auto max-h-64 object-cover"
+                                                            loading="lazy"
+                                                        />
+                                                    </span>
+                                                );
+                                            }
+                                            return (
+                                                <a
+                                                    {...props}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-blue-300 hover:text-blue-200 underline"
+                                                />
+                                            );
+                                        },
+                                        // Style other elements
+                                        p: ({ node, ...props }) => <p {...props} className="mb-2 last:mb-0" />,
+                                        ul: ({ node, ...props }) => <ul {...props} className="list-disc pl-4 mb-2 space-y-1" />,
+                                        ol: ({ node, ...props }) => <ol {...props} className="list-decimal pl-4 mb-2 space-y-1" />,
+                                        li: ({ node, ...props }) => <li {...props} className="pl-1" />,
+                                        strong: ({ node, ...props }) => <strong {...props} className="font-bold text-blue-200" />,
+                                    }}
+                                >
+                                    {content}
+                                </ReactMarkdown>
                             ) : (
                                 !hasTools && <p className="italic text-white/40">...</p>
                             )}
