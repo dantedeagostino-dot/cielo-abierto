@@ -94,7 +94,15 @@ function ParametersGrid({ data }: { data: Record<string, any> }) {
 // --- Main Component ---
 
 export default function ToolResult({ toolName, result }: { toolName: string; result: any }) {
-    if (!result || result.error) return null; // Errors are usually handled in text or ignored
+    if (!result) return null;
+
+    if (result.error) {
+        return (
+            <div className="p-3 my-2 bg-red-900/20 border border-red-500/50 rounded-lg text-red-200 text-xs font-mono">
+                <strong>Error en {toolName}:</strong> {result.error}
+            </div>
+        );
+    }
 
     // 1. APOD
     if (toolName === 'getDataFromAPOD') {
