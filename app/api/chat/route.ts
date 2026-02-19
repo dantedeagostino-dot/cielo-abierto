@@ -14,9 +14,8 @@ import { searchTechProjects } from '@/lib/nasa/techport';
 import { getSatelliteTLE } from '@/lib/nasa/tle';
 import { getMarsWeather } from '@/lib/nasa/insight';
 import { searchPatents } from '@/lib/nasa/techtransfer';
-import { format } from 'date-fns';
 
-export const maxDuration = 60; // Allow longer timeouts for API calls
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
     const { messages } = await req.json();
@@ -46,7 +45,6 @@ export async function POST(req: Request) {
             }
             coreMessages.push({ role: 'assistant', content });
 
-            // Handle tool results which are separate messages in CoreMessage format
             if (m.toolInvocations) {
                 const toolResults: any[] = [];
                 for (const t of m.toolInvocations) {
@@ -96,6 +94,7 @@ export async function POST(req: Request) {
 
     **Tone:** Inspiring, scientific, friendly, and accessible. Use emojis sparingly but effectively.
     **Format:** clear Markdown, bold key terms, use bullet points for lists.`,
+        // @ts-ignore
         maxSteps: 10,
 
         tools: {
@@ -104,14 +103,15 @@ export async function POST(req: Request) {
                 parameters: z.object({
                     date: z.string().optional().describe('The date in YYYY-MM-DD format. Defaults to today if not provided.'),
                 }),
-                execute: async ({ date }: any) => {
+                execute: async (args: any) => {
+                    const { date } = args;
                     try {
                         return await getAPOD(date);
                     } catch (e: any) {
                         return { error: e.message };
                     }
                 },
-            }),
+            } as any),
 
             getAsteroidFeed: tool({
                 description: 'Get a list of asteroids approaching Earth within a date range.',
@@ -119,14 +119,15 @@ export async function POST(req: Request) {
                     startDate: z.string().describe('Start date in YYYY-MM-DD format'),
                     endDate: z.string().describe('End date in YYYY-MM-DD format. Must be within 7 days of startDate.'),
                 }),
-                execute: async ({ startDate, endDate }: any) => {
+                execute: async (args: any) => {
+                    const { startDate, endDate } = args;
                     try {
                         return await getNeoFeed(startDate, endDate);
                     } catch (e: any) {
                         return { error: e.message };
                     }
                 },
-            }),
+            } as any),
 
             getMarsPhotos: tool({
                 description: 'Get photos from Mars Rovers (Curiosity, Opportunity, Spirit, Perseverance).',
@@ -135,14 +136,15 @@ export async function POST(req: Request) {
                     sol: z.number().optional().default(1000).describe('The Martian Sol (day) to fetch photos from.'),
                     camera: z.enum(['FHAZ', 'RHAZ', 'MAST', 'CHEMCAM', 'MAHLI', 'MARDI', 'NAVCAM', 'PANCAM', 'MINITES']).optional().describe('Specific camera to filter by'),
                 }),
-                execute: async ({ rover, sol, camera }: any) => {
+                execute: async (args: any) => {
+                    const { rover, sol, camera } = args;
                     try {
                         return await getMarsRoverPhotos(rover, sol, camera);
                     } catch (e: any) {
                         return { error: e.message };
                     }
                 },
-            }),
+            } as any),
 
             searchEarthDataCollections: tool({
                 description: 'Search for Earth Science data collections in the Common Metadata Repository (CMR).',
@@ -150,14 +152,15 @@ export async function POST(req: Request) {
                     keyword: z.string().describe('Search keyword (e.g., "temperature", "precipitation", "ozone")'),
                     limit: z.number().optional().default(5).describe('Number of results to return'),
                 }),
-                execute: async ({ keyword, limit }: any) => {
+                execute: async (args: any) => {
+                    const { keyword, limit } = args;
                     try {
                         return await searchEarthData(keyword, limit);
                     } catch (e: any) {
                         return { error: e.message };
                     }
                 },
-            }),
+            } as any),
 
             getEPICImages: tool({
                 description: 'Get recent images of Earth from the DSCOVR satellite (EPIC camera).',
@@ -169,7 +172,7 @@ export async function POST(req: Request) {
                         return { error: e.message };
                     }
                 },
-            }),
+            } as any),
 
             getNaturalEvents: tool({
                 description: 'Get real-time natural events (wildfires, storms, volcanoes) from EONET.',
@@ -177,14 +180,15 @@ export async function POST(req: Request) {
                     limit: z.number().optional().default(5).describe('Number of events to return'),
                     category: z.string().optional().describe('Category of event (e.g., "wildfires", "severeStorms")'),
                 }),
-                execute: async ({ limit, category }: any) => {
+                execute: async (args: any) => {
+                    const { limit, category } = args;
                     try {
                         return await getNaturalEvents(limit, category);
                     } catch (e: any) {
                         return { error: e.message };
                     }
                 },
-            }),
+            } as any),
 
             searchImageLibrary: tool({
                 description: 'Search for general space images and videos in the NASA Image and Video Library.',
@@ -192,14 +196,15 @@ export async function POST(req: Request) {
                     q: z.string().describe('Search query (e.g., "Apollo 11", "Andromeda Galaxy")'),
                     mediaType: z.string().optional().default('image').describe('Media type: "image", "video", or "audio"'),
                 }),
-                execute: async ({ q, mediaType }: any) => {
+                execute: async (args: any) => {
+                    const { q, mediaType } = args;
                     try {
                         return await searchImageLibrary(q, mediaType);
                     } catch (e: any) {
                         return { error: e.message };
                     }
                 },
-            }),
+            } as any),
 
             getSpaceWeather: tool({
                 description: 'Get Space Weather notifications (CME, Geomagnetic Storms) from DONKI.',
@@ -208,86 +213,87 @@ export async function POST(req: Request) {
                     startDate: z.string().optional().describe('Start date (YYYY-MM-DD)'),
                     endDate: z.string().optional().describe('End date (YYYY-MM-DD)'),
                 }),
-                execute: async ({ type, startDate, endDate }: any) => {
+                execute: async (args: any) => {
+                    const { type, startDate, endDate } = args;
                     try {
                         return await getSpaceWeather(type, startDate, endDate);
                     } catch (e: any) {
                         return { error: e.message };
                     }
                 },
-            }),
+            } as any),
 
             queryExoplanets: tool({
                 description: 'Query the NASA Exoplanet Archive for confirmed planets.',
                 parameters: z.object({
                     limit: z.number().optional().default(5).describe('Number of planets to return'),
                 }),
-                execute: async ({ limit }: any) => {
+                execute: async (args: any) => {
+                    const { limit } = args;
                     try {
                         return await queryExoplanets(limit);
                     } catch (e: any) {
                         return { error: e.message };
                     }
                 },
-            }),
+            } as any),
 
             searchTechProjects: tool({
                 description: 'Search for NASA technology projects (TechPort).',
                 parameters: z.object({
                     query: z.string().describe('Search query (e.g., "propulsion", "robotics")'),
                 }),
-                execute: async ({ query }: any) => {
+                execute: async (args: any) => {
+                    const { query } = args;
                     try {
                         return await searchTechProjects(query);
                     } catch (e: any) {
                         return { error: e.message };
                     }
                 },
-            }),
+            } as any),
 
             getSatelliteTLE: tool({
                 description: 'Get Two-Line Element (TLE) data for a satellite.',
                 parameters: z.object({
                     search: z.string().describe('Satellite name or ID (e.g., "ISS", "NOAA 19")'),
                 }),
-                execute: async ({ search }: any) => {
+                execute: async (args: any) => {
+                    const { search } = args;
                     try {
                         return await getSatelliteTLE(search);
                     } catch (e: any) {
                         return { error: e.message };
                     }
                 },
-            }),
+            } as any),
 
             getMarsWeather: tool({
                 description: 'Get latest weather report from Elysium Planitia, Mars (InSight mission).',
                 parameters: z.object({}),
                 execute: async () => {
-                    console.log('--- Executing getMarsWeather ---');
                     try {
-                        const result = await getMarsWeather();
-                        console.log('--- getMarsWeather result:', JSON.stringify(result).substring(0, 100));
-                        return result;
+                        return await getMarsWeather();
                     } catch (e: any) {
-                        console.error('--- getMarsWeather error:', e);
                         return { error: e.message };
                     }
                 },
-            }),
+            } as any),
 
             searchPatents: tool({
                 description: 'Search NASA patents and technologies.',
                 parameters: z.object({
                     query: z.string().describe('Search query (e.g., "engine", "solar")'),
                 }),
-                execute: async ({ query }: any) => {
+                execute: async (args: any) => {
+                    const { query } = args;
                     try {
                         return await searchPatents(query);
                     } catch (e: any) {
                         return { error: e.message };
                     }
                 },
-            }),
+            } as any),
         },
     });
 
