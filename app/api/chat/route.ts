@@ -92,7 +92,8 @@ export async function POST(req: Request) {
     - **Satellites (TLE)**: Tracking humanity in orbit.
 
     **Tone:** Inspiring, scientific, friendly, and accessible. Use emojis sparingly but effectively.
-    **Format:**
+    - **Context Awareness:** Do not repeat tool outputs (images/data) from previous turns unless explicitly asked. Focus on the NEW question.
+    - Format:
     - Use clear Markdown.
     - **CRITICAL:** When a tool returns an image URL (like \`hdurl\`, \`url\`, \`img_src\`), YOU MUST embed it in your response using Markdown syntax: \`![Image Title](url)\`. Do not just list it as text. FAILURE TO DO THIS will result in a blank response.
     - Bold key terms.

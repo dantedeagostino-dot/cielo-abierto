@@ -42,7 +42,28 @@ export async function getMarsRoverPhotos(
         params.camera = camera;
     }
 
-    return (await fetchFromNASA(`${MARS_ROVER_BASE_URL}/${rover}/photos`, params, {
-        next: { revalidate: 3600 },
-    })) as MarsPhotosResponse;
+    try {
+        const response: any = await fetchFromNASA(`${MARS_ROVER_BASE_URL}/${rover}/photos`, params, {
+            next: { revalidate: 3600 },
+        });
+
+        const data = response as MarsPhotosResponse;
+        if (!data.photos || data.photos.length === 0) {
+            console.log(`[Mars API] No photos found for ${rover} on Sol ${params.sol}. Trying fallback Sol 10...`);
+            // Fallback to Sol 10 if no photos (some rovers might not have photos on Sol 1000)
+            const fallbackParams = { ...params, sol: '100' }; // Use 100 as a safer bet than 10 or 1000
+            return (await fetchFromNASA(`${MARS_ROVER_BASE_URL}/${rover}/photos`, fallbackParams, {
+                next: { revalidate: 3600 },
+            })) as MarsPhotosResponse;
+        }
+
+        return data;
+    } catch (e) {
+        console.error(`[Mars API] Error fetching photos for ${rover} on Sol ${params.sol}:`, e);
+        // Fallback on error too
+        const fallbackParams = { ...params, sol: '100' };
+        return (await fetchFromNASA(`${MARS_ROVER_BASE_URL}/${rover}/photos`, fallbackParams, {
+            next: { revalidate: 3600 },
+        })) as MarsPhotosResponse;
+    }
 }
