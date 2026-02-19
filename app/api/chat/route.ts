@@ -94,8 +94,8 @@ export async function POST(req: Request) {
 
     **Tone:** Inspiring, scientific, friendly, and accessible. Use emojis sparingly but effectively.
     **Format:** clear Markdown, bold key terms, use bullet points for lists.`,
-        // @ts-ignore
-        maxSteps: 10,
+        // Multi-step tool execution logic for AI SDK v6 (replaces maxSteps)
+        stopWhen: (steps: any) => steps.length >= 10,
 
         tools: {
             getDataFromAPOD: tool({
