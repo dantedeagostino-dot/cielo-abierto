@@ -1,5 +1,5 @@
+import { fetchFromNASA } from './telemetry';
 export const APOD_BASE_URL = 'https://api.nasa.gov/planetary/apod';
-
 export interface ApodResponse {
   copyright?: string;
   date: string;
@@ -13,23 +13,15 @@ export interface ApodResponse {
 }
 
 export async function getAPOD(date?: string): Promise<ApodResponse> {
-  const apiKey = process.env.NASA_API_KEY || 'DEMO_KEY';
-  const queryParams = new URLSearchParams({
-    api_key: apiKey,
+  const queryParams: Record<string, string> = {
     thumbs: 'true', // Get video thumbnails
-  });
+  };
 
   if (date) {
-    queryParams.append('date', date);
+    queryParams.date = date;
   }
 
-  const response = await fetch(`${APOD_BASE_URL}?${queryParams.toString()}`, {
+  return (await fetchFromNASA(APOD_BASE_URL, queryParams, {
     next: { revalidate: 3600 }, // Cache for 1 hour
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch APOD: ${response.statusText}`);
-  }
-
-  return response.json();
+  })) as ApodResponse;
 }

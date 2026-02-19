@@ -1,3 +1,5 @@
+import { fetchFromNASA } from './telemetry';
+
 export const NEOWS_BASE_URL = 'https://api.nasa.gov/neo/rest/v1';
 
 export interface NearEarthObject {
@@ -42,20 +44,12 @@ export interface NeoFeedResponse {
 }
 
 export async function getNeoFeed(startDate: string, endDate: string): Promise<NeoFeedResponse> {
-    const apiKey = process.env.NASA_API_KEY || 'DEMO_KEY';
-    const queryParams = new URLSearchParams({
-        api_key: apiKey,
+    const params: Record<string, string> = {
         start_date: startDate,
         end_date: endDate,
-    });
+    };
 
-    const response = await fetch(`${NEOWS_BASE_URL}/feed?${queryParams.toString()}`, {
+    return (await fetchFromNASA(`${NEOWS_BASE_URL}/feed`, params, {
         next: { revalidate: 3600 },
-    });
-
-    if (!response.ok) {
-        throw new Error(`Failed to fetch NeoWs Feed: ${response.statusText}`);
-    }
-
-    return response.json();
+    })) as NeoFeedResponse;
 }

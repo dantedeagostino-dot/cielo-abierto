@@ -1,3 +1,5 @@
+import { fetchFromNASA } from './telemetry';
+
 export const MARS_ROVER_BASE_URL = 'https://api.nasa.gov/mars-photos/api/v1/rovers';
 
 export type RoverName = 'curiosity' | 'opportunity' | 'spirit' | 'perseverance';
@@ -32,23 +34,15 @@ export async function getMarsRoverPhotos(
     sol: number = 1000,
     camera?: CameraName
 ): Promise<MarsPhotosResponse> {
-    const apiKey = process.env.NASA_API_KEY || 'DEMO_KEY';
-    const queryParams = new URLSearchParams({
-        api_key: apiKey,
+    const params: Record<string, string> = {
         sol: sol.toString(),
-    });
+    };
 
     if (camera) {
-        queryParams.append('camera', camera);
+        params.camera = camera;
     }
 
-    const response = await fetch(`${MARS_ROVER_BASE_URL}/${rover}/photos?${queryParams.toString()}`, {
+    return (await fetchFromNASA(`${MARS_ROVER_BASE_URL}/${rover}/photos`, params, {
         next: { revalidate: 3600 },
-    });
-
-    if (!response.ok) {
-        throw new Error(`Failed to fetch Mars Rover Photos: ${response.statusText}`);
-    }
-
-    return response.json();
+    })) as MarsPhotosResponse;
 }
