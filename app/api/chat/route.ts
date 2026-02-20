@@ -31,7 +31,13 @@ export async function POST(req: Request) {
             coreMessages.push({ role: m.role, content: m.content });
         } else if (m.role === 'assistant') {
             const content: any[] = [];
-            if (m.content) content.push({ type: 'text', text: m.content });
+
+            // Critical fix for Context Pollution: 
+            // If the assistant used a tool, we DO NOT push its previous text (apologies, confusion, etc.)
+            // We only push the text if it was a pure text response without tools.
+            if (m.content && (!m.toolInvocations || m.toolInvocations.length === 0)) {
+                content.push({ type: 'text', text: m.content });
+            }
 
             if (m.toolInvocations) {
                 for (const t of m.toolInvocations) {

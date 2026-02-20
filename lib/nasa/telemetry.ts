@@ -40,7 +40,14 @@ export async function fetchFromNASA(url: string, params: Record<string, string> 
             throw new Error(`NASA API Error (${response.status}): ${errorBody}`);
         }
 
-        return response.json();
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('text/html')) {
+            const htmlBody = await response.text();
+            console.error(`[NASA API Error] Received HTML instead of JSON: ${htmlBody.substring(0, 200)}...`);
+            throw new Error(`NASA API returned HTML instead of JSON. Possible rate limit or gateway error.`);
+        }
+
+        return await response.json();
     } catch (error) {
         console.error('[NASA API Network Error]', error);
         throw error;
