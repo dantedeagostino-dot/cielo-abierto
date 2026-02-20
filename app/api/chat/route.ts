@@ -143,14 +143,16 @@ export async function POST(req: Request) {
                 description: 'Get photos from Mars Rovers (Curiosity, Opportunity, Spirit, Perseverance). To see the Martian landscape, prioritize using NAVCAM or MAST cameras.',
                 parameters: z.object({
                     rover: z.enum(['curiosity', 'opportunity', 'spirit', 'perseverance']).optional().default('curiosity').describe('The name of the rover'),
-                    sol: z.number().optional().describe('The Martian Sol (day) to fetch photos from. Leave empty for latest.'),
-                    camera: z.enum(['FHAZ', 'RHAZ', 'MAST', 'CHEMCAM', 'MAHLI', 'MARDI', 'NAVCAM', 'PANCAM', 'MINITES']).optional().describe('Specific camera to filter by'),
+                    sol: z.number().optional().describe('The Martian Sol (day) to fetch photos from. Leave empty for latest if earth_date is not provided.'),
+                    earth_date: z.string().optional().describe('The Earth date (YYYY-MM-DD) to fetch photos from. If provided, this overrides sol.'),
+                    camera: z.enum(['FHAZ', 'RHAZ', 'MAST', 'CHEMCAM', 'MAHLI', 'MARDI', 'NAVCAM', 'PANCAM', 'MINITES', 'EDL_RUCAM', 'EDL_RDCAM', 'EDL_DDCAM', 'EDL_PUCAM1', 'EDL_PUCAM2', 'NAVCAM_LEFT', 'NAVCAM_RIGHT', 'MCZ_RIGHT', 'MCZ_LEFT', 'FRONT_HAZCAM_LEFT_A', 'FRONT_HAZCAM_RIGHT_A', 'REAR_HAZCAM_LEFT', 'REAR_HAZCAM_RIGHT', 'SHERLOC_WATSON']).optional().describe('Specific camera. Valid cameras: Curiosity (FHAZ, RHAZ, MAST, CHEMCAM, MAHLI, MARDI, NAVCAM), Opportunity/Spirit (FHAZ, RHAZ, NAVCAM, PANCAM, MINITES), Perseverance (FHAZ, RHAZ, NAVCAM_LEFT, NAVCAM_RIGHT, MCZ_RIGHT, MCZ_LEFT, FRONT_HAZCAM_LEFT_A, FRONT_HAZCAM_RIGHT_A, REAR_HAZCAM_LEFT, REAR_HAZCAM_RIGHT, SHERLOC_WATSON). Do not use invalid combinations.'),
+                    page: z.number().optional().describe('Page number of results (25 photos per page). Default is 1.'),
                 }),
 
                 execute: async (args: any) => {
-                    const { rover = 'curiosity', sol, camera } = args;
+                    const { rover = 'curiosity', sol, earth_date, camera, page } = args;
                     try {
-                        return await getMarsRoverPhotos(rover, sol, camera);
+                        return await getMarsRoverPhotos(rover, sol, earth_date, camera, page);
                     } catch (e: any) {
                         return { error: e.message };
                     }

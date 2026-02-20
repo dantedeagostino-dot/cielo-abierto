@@ -3,7 +3,21 @@ import { fetchFromNASA } from './telemetry';
 export const MARS_ROVER_BASE_URL = 'https://api.nasa.gov/mars-photos/api/v1/rovers';
 
 export type RoverName = 'curiosity' | 'opportunity' | 'spirit' | 'perseverance';
-export type CameraName = 'FHAZ' | 'RHAZ' | 'MAST' | 'CHEMCAM' | 'MAHLI' | 'MARDI' | 'NAVCAM' | 'PANCAM' | 'MINITES';
+
+// Comprehensive list of cameras from the NASA API docs
+export type CameraName = 'FHAZ' | 'RHAZ' | 'MAST' | 'CHEMCAM' | 'MAHLI' | 'MARDI' | 'NAVCAM' | 'PANCAM' | 'MINITES' | 'EDL_RUCAM' | 'EDL_RDCAM' | 'EDL_DDCAM' | 'EDL_PUCAM1' | 'EDL_PUCAM2' | 'NAVCAM_LEFT' | 'NAVCAM_RIGHT' | 'MCZ_RIGHT' | 'MCZ_LEFT' | 'FRONT_HAZCAM_LEFT_A' | 'FRONT_HAZCAM_RIGHT_A' | 'REAR_HAZCAM_LEFT' | 'REAR_HAZCAM_RIGHT' | 'SHERLOC_WATSON';
+
+// Strict Camera mapping based on the NASA documentation provided by the user
+const ROVER_CAMERAS: Record<RoverName, CameraName[]> = {
+    curiosity: ['FHAZ', 'RHAZ', 'MAST', 'CHEMCAM', 'MAHLI', 'MARDI', 'NAVCAM'],
+    opportunity: ['FHAZ', 'RHAZ', 'NAVCAM', 'PANCAM', 'MINITES'],
+    spirit: ['FHAZ', 'RHAZ', 'NAVCAM', 'PANCAM', 'MINITES'],
+    perseverance: [
+        'EDL_RUCAM', 'EDL_RDCAM', 'EDL_DDCAM', 'EDL_PUCAM1', 'EDL_PUCAM2',
+        'NAVCAM_LEFT', 'NAVCAM_RIGHT', 'MCZ_RIGHT', 'MCZ_LEFT', 'FRONT_HAZCAM_LEFT_A',
+        'FRONT_HAZCAM_RIGHT_A', 'REAR_HAZCAM_LEFT', 'REAR_HAZCAM_RIGHT', 'SHERLOC_WATSON'
+    ] // Expanded Perseverance cameras
+};
 
 export interface RoverManifest {
     name: string;
@@ -51,7 +65,7 @@ export interface MarsPhotosResponse {
  * If no landscape photos are available, returns everything that was captured.
  */
 function getPreferredPhotos(photos: MarsPhoto[]): MarsPhoto[] {
-    const landscapeCams = ['NAVCAM', 'MAST', 'PANCAM'];
+    const landscapeCams = ['NAVCAM', 'MAST', 'PANCAM', 'NAVCAM_LEFT', 'NAVCAM_RIGHT', 'MCZ_RIGHT', 'MCZ_LEFT'];
     const landscapePhotos = photos.filter(p => landscapeCams.includes(p.camera.name));
     return landscapePhotos.length > 0 ? landscapePhotos : photos;
 }
@@ -117,32 +131,63 @@ export async function getLatestMarsPhotos(rover: RoverName): Promise<MarsPhoto[]
 export async function getMarsRoverPhotos(
     rover: RoverName,
     sol?: number,
-    camera?: CameraName
+    earthDate?: string,
+    camera?: CameraName,
+    page?: number
 ): Promise<MarsPhotosResponse> {
 
-    // 1. If no specific Sol is provided, try the dedicated latest_photos endpoint first
-    if (sol === undefined) {
+    // 1. Camera Validation
+    if (camera) {
+        const validCameras = ROVER_CAMERAS[rover];
+        if (!validCameras.includes(camera)) {
+            console.warn(`[Mars API] Tool requested invalid camera '${camera}' for rover '${rover}'. Ignoring camera filter.`);
+            camera = undefined; // Nullify invalid camera to prevent barren API calls
+        }
+    }
+
+    // 2. Decide the primary time parameter: `earth_date` overrides `sol`
+    // If BOTH are undefined, fallback to `latest_photos` FIRST
+    if (sol === undefined && earthDate === undefined) {
         const latestPhotos = await getLatestMarsPhotos(rover);
         if (latestPhotos.length > 0) {
+            // Apply client-side camera filtering for `latest_photos` if requested, 
+            // since `latest_photos` doesn't natively support `camera` query param robustly
+            if (camera) {
+                const filtered = latestPhotos.filter(p => p.camera.name === camera);
+                if (filtered.length > 0) {
+                    return { photos: filtered };
+                }
+                console.warn(`[Mars API] No latest photos found for specific camera ${camera}. Returning all latest.`);
+            }
             return { photos: latestPhotos };
         }
 
-        // If latest_photos fails (e.g. 404 on API), check manifest for max_sol
+        // If latest_photos fails (e.g. 404), check manifest for max_sol
         console.warn(`[Mars API] latest_photos returned empty for ${rover}. Fetching manifest max_sol.`);
         const manifest = await getRoverManifest(rover);
         if (manifest) {
             sol = manifest.max_sol;
         } else {
-            sol = 1000; // Ultimate fallback if everything fails
+            sol = 1000; // Ultimate fallback
         }
     }
 
-    const params: Record<string, string> = {
-        sol: sol.toString(),
-    };
+    // Prepare query parameters
+    const params: Record<string, string> = {};
+
+    // The API requires either `sol` OR `earth_date`. If `earthDate` is somehow set, we use it over `sol`
+    if (earthDate) {
+        params.earth_date = earthDate;
+    } else if (sol !== undefined) {
+        params.sol = sol.toString();
+    }
 
     if (camera) {
         params.camera = camera;
+    }
+
+    if (page !== undefined) {
+        params.page = page.toString();
     }
 
     try {
@@ -151,22 +196,22 @@ export async function getMarsRoverPhotos(
         });
 
         const data = response as MarsPhotosResponse;
-
         let photos = data.photos || [];
 
-        // 2. HTTPS Enforcement (Critical for Vercel/Mixed Content)
+        // 3. HTTPS Enforcement
         photos = photos.map(photo => ({
             ...photo,
             img_src: photo.img_src.replace('http://', 'https://')
         }));
 
-        // 3. Fallback Logic: If specific Sol request returns empty, try manifest
-        if (photos.length === 0) {
+        // 4. Fallback Logic: If specific request returns empty, and it was a `sol` request, try manifest 
+        if (photos.length === 0 && sol !== undefined) {
             console.warn(`[Mars API] No photos for ${rover} Sol ${sol}. Falling back to manifest max_sol.`);
             const manifest = await getRoverManifest(rover);
-            if (manifest && manifest.max_sol !== sol) { // Prevent infinite loop if max_sol is also empty
+            if (manifest && manifest.max_sol !== sol) {
                 const fallbackParams: Record<string, string> = { sol: manifest.max_sol.toString() };
                 if (camera) fallbackParams.camera = camera;
+                if (page !== undefined) fallbackParams.page = page.toString();
 
                 const fallbackResponse: any = await fetchFromNASA(`${MARS_ROVER_BASE_URL}/${rover.toLowerCase()}/photos`, fallbackParams);
                 if (fallbackResponse.photos) {
@@ -176,23 +221,9 @@ export async function getMarsRoverPhotos(
             }
         }
 
-        // 3. Fallback Logic: If specific Sol request returns empty, try finding nearest data?
-        // For now, we return empty structure, but the chat agent typically handles "no photos found".
-        // However, if we defaulted to 'sol=1000' because manifest failed, and it's empty, we might try a hardcoded safe sol.
-        if (photos.length === 0 && sol === 1000) {
-            // Try Curiosity Sol 1 (guaranteed to exists) just to show SOMETHING if standard fallback fails
-            console.warn(`[Mars API] No photos for ${rover} Sol ${sol}. Attempting Sol 1 fallback.`);
-            const retryParams = { ...params, sol: '1' };
-            const retryResponse: any = await fetchFromNASA(`${MARS_ROVER_BASE_URL}/${rover}/photos`, retryParams);
-            const retryData = retryResponse as MarsPhotosResponse;
-            if (retryData.photos) {
-                photos = retryData.photos.map(p => ({ ...p, img_src: p.img_src.replace('http://', 'https://') }));
-            }
-        }
-
         return { photos: getPreferredPhotos(photos) };
     } catch (e) {
-        console.error(`[Mars API] Error fetching photos for ${rover} on Sol ${sol}:`, e);
+        console.error(`[Mars API] Error fetching photos for ${rover}:`, e);
         return { photos: [] };
     }
 }
