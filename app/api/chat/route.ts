@@ -142,12 +142,13 @@ export async function POST(req: Request) {
             getMarsPhotos: tool({
                 description: 'Get photos from Mars Rovers (Curiosity, Opportunity, Spirit, Perseverance).',
                 parameters: z.object({
-                    rover: z.enum(['curiosity', 'opportunity', 'spirit', 'perseverance']).describe('The name of the rover'),
-                    sol: z.number().optional().default(1000).describe('The Martian Sol (day) to fetch photos from.'),
+                    rover: z.enum(['curiosity', 'opportunity', 'spirit', 'perseverance']).optional().default('curiosity').describe('The name of the rover'),
+                    sol: z.number().optional().describe('The Martian Sol (day) to fetch photos from. Leave empty for latest.'),
                     camera: z.enum(['FHAZ', 'RHAZ', 'MAST', 'CHEMCAM', 'MAHLI', 'MARDI', 'NAVCAM', 'PANCAM', 'MINITES']).optional().describe('Specific camera to filter by'),
                 }),
+
                 execute: async (args: any) => {
-                    const { rover, sol, camera } = args;
+                    const { rover = 'curiosity', sol, camera } = args;
                     try {
                         return await getMarsRoverPhotos(rover, sol, camera);
                     } catch (e: any) {
