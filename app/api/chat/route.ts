@@ -140,7 +140,7 @@ export async function POST(req: Request) {
             } as any),
 
             getMarsPhotos: tool({
-                description: 'Get photos from Mars Rovers (Curiosity, Opportunity, Spirit, Perseverance).',
+                description: 'Get photos from Mars Rovers (Curiosity, Opportunity, Spirit, Perseverance). To see the Martian landscape, prioritize using NAVCAM or MAST cameras.',
                 parameters: z.object({
                     rover: z.enum(['curiosity', 'opportunity', 'spirit', 'perseverance']).optional().default('curiosity').describe('The name of the rover'),
                     sol: z.number().optional().describe('The Martian Sol (day) to fetch photos from. Leave empty for latest.'),

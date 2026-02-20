@@ -1,5 +1,4 @@
 import { fetchFromNASA } from './telemetry';
-import { searchImageLibrary } from './library';
 
 export const MARS_ROVER_BASE_URL = 'https://api.nasa.gov/mars-photos/api/v1/rovers';
 
@@ -48,31 +47,13 @@ export interface MarsPhotosResponse {
 }
 
 /**
- * Maps a NASA Image Library item to a MarsPhoto structure for frontend compatibility
+ * Filters the photos list to prioritize cameras that offer landscape views.
+ * If no landscape photos are available, returns everything that was captured.
  */
-function mapLibraryItemToMarsPhoto(item: any, idCounter: number, rover: string): MarsPhoto {
-    const data = item.data[0];
-    const imgHref = item.links?.[0]?.href || '';
-
-    return {
-        id: parseInt(data.nasa_id.replace(/\D/g, '').substring(0, 8)) || idCounter,
-        sol: 1000, // Dummy sol
-        camera: {
-            id: 0,
-            name: 'NASA GenLib',
-            rover_id: 0,
-            full_name: 'NASA Image Library',
-        },
-        img_src: imgHref.replace('http://', 'https://'), // enforce HTTPS
-        earth_date: data.date_created ? data.date_created.split('T')[0] : new Date().toISOString().split('T')[0],
-        rover: {
-            id: 0,
-            name: rover.charAt(0).toUpperCase() + rover.slice(1),
-            landing_date: 'Unknown',
-            launch_date: 'Unknown',
-            status: 'Unknown',
-        }
-    };
+function getPreferredPhotos(photos: MarsPhoto[]): MarsPhoto[] {
+    const landscapeCams = ['NAVCAM', 'MAST', 'PANCAM'];
+    const landscapePhotos = photos.filter(p => landscapeCams.includes(p.camera.name));
+    return landscapePhotos.length > 0 ? landscapePhotos : photos;
 }
 
 /**
@@ -123,18 +104,13 @@ export async function getLatestMarsPhotos(rover: RoverName): Promise<MarsPhoto[]
             img_src: photo.img_src.replace('http://', 'https://')
         }));
 
+        photos = getPreferredPhotos(photos);
+
         if (photos.length > 0) return photos;
         throw new Error("Empty photos array from Mars Rover API");
     } catch (error) {
-        console.warn(`[Mars API] Error fetching latest photos for ${rover}, falling back to NASA Image Library:`, error);
-        try {
-            // General Fallback to NASA Image Library if Mars API is down
-            const fallbackLibraryItems = await searchImageLibrary(`mars ${rover} rover`, 'image');
-            return fallbackLibraryItems.map((item, index) => mapLibraryItemToMarsPhoto(item, index, rover));
-        } catch (libError) {
-            console.error(`[Mars API] Both primary and fallback Image Library failed for ${rover}`, libError);
-            return [];
-        }
+        console.warn(`[Mars API] Error fetching latest photos for ${rover}:`, error);
+        return [];
     }
 }
 
@@ -194,7 +170,8 @@ export async function getMarsRoverPhotos(
 
                 const fallbackResponse: any = await fetchFromNASA(`${MARS_ROVER_BASE_URL}/${rover.toLowerCase()}/photos`, fallbackParams);
                 if (fallbackResponse.photos) {
-                    return { photos: fallbackResponse.photos.map((p: any) => ({ ...p, img_src: p.img_src.replace('http://', 'https://') })) };
+                    const fallbackPhotos = fallbackResponse.photos.map((p: any) => ({ ...p, img_src: p.img_src.replace('http://', 'https://') }));
+                    return { photos: getPreferredPhotos(fallbackPhotos) };
                 }
             }
         }
@@ -213,27 +190,9 @@ export async function getMarsRoverPhotos(
             }
         }
 
-        // 4. Ultimate Fallback Logic: NASA Image Library
-        if (photos.length === 0) {
-            console.warn(`[Mars API] All specific Sol fallbacks failed. Searching NASA Image Library as final fallback for ${rover}.`);
-            const fallbackLibraryItems = await searchImageLibrary(`mars ${rover} rover`, 'image');
-            if (fallbackLibraryItems && fallbackLibraryItems.length > 0) {
-                photos = fallbackLibraryItems.map((item, index) => mapLibraryItemToMarsPhoto(item, index, rover));
-            }
-        }
-
-        return { photos };
+        return { photos: getPreferredPhotos(photos) };
     } catch (e) {
         console.error(`[Mars API] Error fetching photos for ${rover} on Sol ${sol}:`, e);
-
-        // Return ultimate fallback even on top-level catchment
-        try {
-            const fallbackLibraryItems = await searchImageLibrary(`mars ${rover} rover`, 'image');
-            if (fallbackLibraryItems && fallbackLibraryItems.length > 0) {
-                return { photos: fallbackLibraryItems.map((item, index) => mapLibraryItemToMarsPhoto(item, index, rover)) };
-            }
-        } catch (fallbackLibErr) { }
-
         return { photos: [] };
     }
 }
