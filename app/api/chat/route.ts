@@ -152,16 +152,16 @@ export async function POST(req: Request) {
             }),
 
             getMarsPhotos: tool({
-                description: 'Get photos from Mars Rovers (Curiosity, Opportunity, Spirit, Perseverance). To see the Martian landscape, prioritize using NAVCAM or MAST cameras.',
+                description: 'Get photos from Mars Rovers (Curiosity, Perseverance). To see the Martian landscape, prioritize using NAVCAM or MAST cameras. Opportunity and Spirit APIs are defunct.',
                 parameters: z.object({
-                    rover: z.enum(['curiosity', 'opportunity', 'spirit', 'perseverance']).describe('The name of the rover. THIS IS REQUIRED.'),
+                    rover: z.enum(['curiosity', 'perseverance']).describe('The name of the rover. THIS IS REQUIRED.'),
                     sol: z.number().optional().describe('The Martian Sol (day) to fetch photos from. Leave empty for latest if earth_date is not provided.'),
                     earth_date: z.string().optional().describe('The Earth date (YYYY-MM-DD) to fetch photos from. If provided, this overrides sol.'),
-                    camera: z.enum(['FHAZ', 'RHAZ', 'MAST', 'CHEMCAM', 'MAHLI', 'MARDI', 'NAVCAM', 'PANCAM', 'MINITES', 'EDL_RUCAM', 'EDL_RDCAM', 'EDL_DDCAM', 'EDL_PUCAM1', 'EDL_PUCAM2', 'NAVCAM_LEFT', 'NAVCAM_RIGHT', 'MCZ_RIGHT', 'MCZ_LEFT', 'FRONT_HAZCAM_LEFT_A', 'FRONT_HAZCAM_RIGHT_A', 'REAR_HAZCAM_LEFT', 'REAR_HAZCAM_RIGHT', 'SHERLOC_WATSON']).optional().describe('Specific camera. Valid cameras: Curiosity (FHAZ, RHAZ, MAST, CHEMCAM, MAHLI, MARDI, NAVCAM), Opportunity/Spirit (FHAZ, RHAZ, NAVCAM, PANCAM, MINITES), Perseverance (FHAZ, RHAZ, NAVCAM_LEFT, NAVCAM_RIGHT, MCZ_RIGHT, MCZ_LEFT, FRONT_HAZCAM_LEFT_A, FRONT_HAZCAM_RIGHT_A, REAR_HAZCAM_LEFT, REAR_HAZCAM_RIGHT, SHERLOC_WATSON). Do not use invalid combinations.'),
+                    camera: z.enum(['FHAZ', 'RHAZ', 'MAST', 'CHEMCAM', 'MAHLI', 'MARDI', 'NAVCAM', 'PANCAM', 'MINITES', 'EDL_RUCAM', 'EDL_RDCAM', 'EDL_DDCAM', 'EDL_PUCAM1', 'EDL_PUCAM2', 'NAVCAM_LEFT', 'NAVCAM_RIGHT', 'MCZ_RIGHT', 'MCZ_LEFT', 'FRONT_HAZCAM_LEFT_A', 'FRONT_HAZCAM_RIGHT_A', 'REAR_HAZCAM_LEFT', 'REAR_HAZCAM_RIGHT', 'SHERLOC_WATSON']).optional().describe('Specific camera. Valid cameras: Curiosity (FHAZ, RHAZ, MAST, CHEMCAM, MAHLI, MARDI, NAVCAM), Perseverance (FHAZ, RHAZ, NAVCAM_LEFT, NAVCAM_RIGHT, MCZ_RIGHT, MCZ_LEFT, FRONT_HAZCAM_LEFT_A, FRONT_HAZCAM_RIGHT_A, REAR_HAZCAM_LEFT, REAR_HAZCAM_RIGHT, SHERLOC_WATSON). Do not use invalid combinations.'),
                     page: z.number().optional().describe('Page number of results (25 photos per page). Default is 1.'),
                 }),
                 // @ts-ignore: AI SDK Zod mismatch prevents execute overload
-                execute: async (args: { rover: 'curiosity' | 'opportunity' | 'spirit' | 'perseverance', sol?: number, earth_date?: string, camera?: any, page?: number }) => {
+                execute: async (args: { rover: 'curiosity' | 'perseverance', sol?: number, earth_date?: string, camera?: any, page?: number }) => {
                     const { rover, sol, earth_date, camera, page } = args;
                     if (!rover) {
                         return { error: "You MUST specify the 'rover' parameter (e.g. 'perseverance' or 'curiosity')." };

@@ -136,7 +136,7 @@ export async function getMarsRoverPhotos(
     } else {
         // MSL (Curiosity) uses raw_image_items
         const mslParams: Record<string, string> = {
-            order: 'sol desc,instrument_sort asc,sample_type_sort asc, date_taken desc',
+            order: 'sol desc',
             per_page: '25',
             page: page.toString(),
             condition_1: 'msl:mission',
@@ -156,7 +156,8 @@ export async function getMarsRoverPhotos(
         }
 
         const queryParams = new URLSearchParams(mslParams);
-        fullUrl = `https://mars.nasa.gov/api/v1/raw_image_items/?${queryParams.toString()}`;
+        // The internal API fails if commas are URL-encoded as %2C
+        fullUrl = `https://mars.nasa.gov/api/v1/raw_image_items/?${queryParams.toString().replace(/%2C/g, ',')}`;
     }
 
     try {
