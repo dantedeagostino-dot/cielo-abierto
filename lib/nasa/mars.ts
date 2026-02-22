@@ -1,11 +1,12 @@
 import { fetchFromNASA } from './telemetry';
 
-export const MARS_ROVER_BASE_URL = 'https://api.nasa.gov/mars-photos/api/v1/rovers';
+// We bypass the defunct api.nasa.gov endpoint and use the internal Mars Mission endpoint.
+export const MARS_RAW_IMAGE_BASE_URL = 'https://mars.nasa.gov/api/v1/raw_image_items/';
 
 export type RoverName = 'curiosity' | 'opportunity' | 'spirit' | 'perseverance';
 
 // Comprehensive list of cameras from the NASA API docs
-export type CameraName = 'FHAZ' | 'RHAZ' | 'MAST' | 'CHEMCAM' | 'MAHLI' | 'MARDI' | 'NAVCAM' | 'PANCAM' | 'MINITES' | 'EDL_RUCAM' | 'EDL_RDCAM' | 'EDL_DDCAM' | 'EDL_PUCAM1' | 'EDL_PUCAM2' | 'NAVCAM_LEFT' | 'NAVCAM_RIGHT' | 'MCZ_RIGHT' | 'MCZ_LEFT' | 'FRONT_HAZCAM_LEFT_A' | 'FRONT_HAZCAM_RIGHT_A' | 'REAR_HAZCAM_LEFT' | 'REAR_HAZCAM_RIGHT' | 'SHERLOC_WATSON';
+export type CameraName = 'FHAZ' | 'RHAZ' | 'MAST' | 'CHEMCAM' | 'MAHLI' | 'MARDI' | 'NAVCAM' | 'PANCAM' | 'MINITES' | 'EDL_RUCAM' | 'EDL_RDCAM' | 'EDL_DDCAM' | 'EDL_PUCAM1' | 'EDL_PUCAM2' | 'NAVCAM_LEFT' | 'NAVCAM_RIGHT' | 'MCZ_RIGHT' | 'MCZ_LEFT' | 'FRONT_HAZCAM_LEFT_A' | 'FRONT_HAZCAM_RIGHT_A' | 'REAR_HAZCAM_LEFT' | 'REAR_HAZCAM_RIGHT' | 'SHERLOC_WATSON' | 'SKYCAM';
 
 // Strict Camera mapping based on the NASA documentation provided by the user
 const ROVER_CAMERAS: Record<RoverName, CameraName[]> = {
@@ -15,25 +16,9 @@ const ROVER_CAMERAS: Record<RoverName, CameraName[]> = {
     perseverance: [
         'EDL_RUCAM', 'EDL_RDCAM', 'EDL_DDCAM', 'EDL_PUCAM1', 'EDL_PUCAM2',
         'NAVCAM_LEFT', 'NAVCAM_RIGHT', 'MCZ_RIGHT', 'MCZ_LEFT', 'FRONT_HAZCAM_LEFT_A',
-        'FRONT_HAZCAM_RIGHT_A', 'REAR_HAZCAM_LEFT', 'REAR_HAZCAM_RIGHT', 'SHERLOC_WATSON'
-    ] // Expanded Perseverance cameras
+        'FRONT_HAZCAM_RIGHT_A', 'REAR_HAZCAM_LEFT', 'REAR_HAZCAM_RIGHT', 'SHERLOC_WATSON', 'SKYCAM'
+    ]
 };
-
-export interface RoverManifest {
-    name: string;
-    landing_date: string;
-    launch_date: string;
-    status: string;
-    max_sol: number;
-    max_date: string;
-    total_photos: number;
-    photos: {
-        sol: number;
-        earth_date: string;
-        total_photos: number;
-        cameras: string[];
-    }[];
-}
 
 export interface MarsPhoto {
     id: number;
@@ -71,69 +56,39 @@ function getPreferredPhotos(photos: MarsPhoto[]): MarsPhoto[] {
 }
 
 /**
- * Fetches the mission manifest for a specific rover.
- * Utilizing the manifest ensures we know the exact 'max_sol' and 'max_date' available,
- * preventing empty responses when querying for "today" (which might not have data yet).
+ * Maps the internal NASA `raw_image_items` JSON structure to the standard MarsPhoto interface
  */
-export async function getRoverManifest(rover: RoverName): Promise<RoverManifest | null> {
-    try {
-        // The manifest endpoint is at /manifests/[rover], NOT /rovers/[rover]/manifests/[rover]
-        const manifestBaseUrl = 'https://api.nasa.gov/mars-photos/api/v1/manifests';
-        const url = `${manifestBaseUrl}/${rover.toLowerCase()}`;
-        console.log(`[Mars API] Fetching manifest from: ${url}`);
-
-        const response: any = await fetchFromNASA(url, {}, {
-            next: { revalidate: 3600 } // Cache manifest for 1 hour
-        });
-
-        if (response.photo_manifest) {
-            return response.photo_manifest as RoverManifest;
+function mapRawImageToMarsPhoto(item: any, rover: RoverName): MarsPhoto {
+    return {
+        id: parseInt(item.imageid || "0", 10),
+        sol: parseInt(item.sol || "0", 10),
+        camera: {
+            id: 0, // Not provided by raw API
+            name: (item.instrument || "UNKNOWN").toUpperCase(),
+            rover_id: 0,
+            full_name: item.instrument || "Unknown Camera",
+        },
+        img_src: (item.https_url || item.url || "").replace('http://', 'https://'),
+        earth_date: item.date_taken ? item.date_taken.split('T')[0] : "Unknown",
+        rover: {
+            id: 0,
+            name: rover.charAt(0).toUpperCase() + rover.slice(1),
+            landing_date: "Unknown", // Would need hardcoding per rover if strict adherence is needed
+            launch_date: "Unknown",
+            status: "active"
         }
-        return null;
-    } catch (error) {
-        console.error(`[Mars API] Error fetching manifest for ${rover}:`, error);
-        return null; // Fail gracefully
-    }
+    };
 }
 
 /**
- * Fetches the absolute latest photos available for a rover.
- * This is the preferred fallback when no specific date/sol is requested.
+ * Fetches photos from the internal `mars.nasa.gov` raw image API.
  */
-export async function getLatestMarsPhotos(rover: RoverName): Promise<MarsPhoto[]> {
-    try {
-        const url = `${MARS_ROVER_BASE_URL}/${rover.toLowerCase()}/latest_photos`;
-        console.log(`[Mars API] Fetching latest photos from: ${url}`);
-        const response: any = await fetchFromNASA(url, {}, {
-            next: { revalidate: 3600 }
-        });
-
-        // The endpoint returns { latest_photos: [...] }
-        const data = response as MarsPhotosResponse;
-        let photos = data.latest_photos || data.photos || [];
-
-        // Enforce HTTPS
-        photos = photos.map(photo => ({
-            ...photo,
-            img_src: photo.img_src.replace('http://', 'https://')
-        }));
-
-        photos = getPreferredPhotos(photos);
-
-        if (photos.length > 0) return photos;
-        throw new Error("Empty photos array from Mars Rover API");
-    } catch (error) {
-        console.warn(`[Mars API] Error fetching latest photos for ${rover}:`, error);
-        return [];
-    }
-}
-
 export async function getMarsRoverPhotos(
     rover: RoverName,
     sol?: number,
     earthDate?: string,
     camera?: CameraName,
-    page?: number
+    page: number = 0 // The internal API uses 0-based indexing for pages
 ): Promise<MarsPhotosResponse> {
 
     // 1. Camera Validation
@@ -141,85 +96,69 @@ export async function getMarsRoverPhotos(
         const validCameras = ROVER_CAMERAS[rover];
         if (!validCameras.includes(camera)) {
             console.warn(`[Mars API] Tool requested invalid camera '${camera}' for rover '${rover}'. Ignoring camera filter.`);
-            camera = undefined; // Nullify invalid camera to prevent barren API calls
+            camera = undefined;
         }
     }
 
-    // 2. Decide the primary time parameter: `earth_date` overrides `sol`
-    // If BOTH are undefined, fallback to `latest_photos` FIRST
-    if (sol === undefined && earthDate === undefined) {
-        const latestPhotos = await getLatestMarsPhotos(rover);
-        if (latestPhotos.length > 0) {
-            // Apply client-side camera filtering for `latest_photos` if requested, 
-            // since `latest_photos` doesn't natively support `camera` query param robustly
-            if (camera) {
-                const filtered = latestPhotos.filter(p => p.camera.name === camera);
-                if (filtered.length > 0) {
-                    return { photos: filtered };
-                }
-                console.warn(`[Mars API] No latest photos found for specific camera ${camera}. Returning all latest.`);
-            }
-            return { photos: latestPhotos };
-        }
+    // 2. Map target mission format. Curiosity uses 'msl', Perseverance uses 'm20'.
+    // Opportunity/Spirit are generally not active on this specific internal endpoint in the same way,
+    // but we map the most critical ones used today.
+    let missionName = rover.toLowerCase();
+    if (missionName === 'curiosity') missionName = 'msl';
+    if (missionName === 'perseverance') missionName = 'm20';
 
-        // If latest_photos fails (e.g. 404), check manifest for max_sol
-        console.warn(`[Mars API] latest_photos returned empty for ${rover}. Fetching manifest max_sol.`);
-        const manifest = await getRoverManifest(rover);
-        if (manifest) {
-            sol = manifest.max_sol;
-        } else {
-            sol = 1000; // Ultimate fallback
-        }
-    }
+    // Prepare query parameters for the `raw_image_items` endpoint
+    const params: Record<string, string> = {
+        order: 'sol desc,instrument_sort asc,sample_type_sort asc, date_taken desc',
+        per_page: '50',
+        page: page.toString(),
+        condition_1: `${missionName}:mission`
+    };
 
-    // Prepare query parameters
-    const params: Record<string, string> = {};
+    // Include only full images if possible (to avoid thumbnails)
+    params.extended = 'sample_type::full';
 
-    // The API requires either `sol` OR `earth_date`. If `earthDate` is somehow set, we use it over `sol`
+    // The API requires either `sol` OR `earth_date`.
+    // It maps to condition_2 and condition_3
+    let conditionIndex = 2;
+
     if (earthDate) {
-        params.earth_date = earthDate;
+        // Not natively well-supported in this exact format on the internal API without complex date ranges, 
+        // but we can try to filter client side or just fallback to sol.
+        console.warn("[Mars API] Note: earth_date filtering is less precise on the internal API. Using latest available.");
     } else if (sol !== undefined) {
-        params.sol = sol.toString();
+        params[`condition_${conditionIndex}`] = `${sol}:sol:in`;
+        conditionIndex++;
     }
 
     if (camera) {
-        params.camera = camera;
-    }
-
-    if (page !== undefined) {
-        params.page = page.toString();
+        // Map common camera names to the internal abbreviations if needed, though they usually match.
+        params[`condition_${conditionIndex}`] = `${camera.toLowerCase()}:instrument:in`;
     }
 
     try {
-        const response: any = await fetchFromNASA(`${MARS_ROVER_BASE_URL}/${rover.toLowerCase()}/photos`, params, {
-            next: { revalidate: 3600 },
+        const queryParams = new URLSearchParams(params);
+        const fullUrl = `${MARS_RAW_IMAGE_BASE_URL}?${queryParams.toString()}`;
+        console.log(`[Mars API Internal] Fetching: ${fullUrl}`);
+
+        const response = await fetch(fullUrl, {
+            headers: {
+                'User-Agent': 'CieloAbierto/1.0',
+            },
+            next: { revalidate: 3600 }
         });
 
-        const data = response as MarsPhotosResponse;
-        let photos = data.photos || [];
-
-        // 3. HTTPS Enforcement
-        photos = photos.map(photo => ({
-            ...photo,
-            img_src: photo.img_src.replace('http://', 'https://')
-        }));
-
-        // 4. Fallback Logic: If specific request returns empty, and it was a `sol` request, try manifest 
-        if (photos.length === 0 && sol !== undefined) {
-            console.warn(`[Mars API] No photos for ${rover} Sol ${sol}. Falling back to manifest max_sol.`);
-            const manifest = await getRoverManifest(rover);
-            if (manifest && manifest.max_sol !== sol) {
-                const fallbackParams: Record<string, string> = { sol: manifest.max_sol.toString() };
-                if (camera) fallbackParams.camera = camera;
-                if (page !== undefined) fallbackParams.page = page.toString();
-
-                const fallbackResponse: any = await fetchFromNASA(`${MARS_ROVER_BASE_URL}/${rover.toLowerCase()}/photos`, fallbackParams);
-                if (fallbackResponse.photos) {
-                    const fallbackPhotos = fallbackResponse.photos.map((p: any) => ({ ...p, img_src: p.img_src.replace('http://', 'https://') }));
-                    return { photos: getPreferredPhotos(fallbackPhotos) };
-                }
-            }
+        if (!response.ok) {
+            throw new Error(`Mars Internal API Error: ${response.status}`);
         }
+
+        const data = await response.json();
+        const rawItems = data.items || [];
+
+        let photos: MarsPhoto[] = rawItems.map((item: any) => mapRawImageToMarsPhoto(item, rover));
+
+        // Let's filter out images that are just thumbnails if the API didn't respect our extended parameter
+        photos = photos.filter(p => !p.img_src.includes('-thm'));
 
         return { photos: getPreferredPhotos(photos) };
     } catch (e) {
