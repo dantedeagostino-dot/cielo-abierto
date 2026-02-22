@@ -11,10 +11,11 @@ import { type UIMessage } from 'ai';
 
 export default function Home() {
   const [showSplash, setShowSplash] = useState(true);
-  const { messages, status, append } = useChat({
+  const chatConfig = useChat({
     onError: (error) => console.error('[Frontend] useChat error:', error),
     onFinish: (message) => console.log('[Frontend] useChat finished:', message),
-  }) as any;
+  });
+  const { messages, status } = chatConfig;
   const [input, setInput] = useState('');
 
   const isLoading = status === 'submitted' || status === 'streaming';
@@ -28,8 +29,10 @@ export default function Home() {
     if (!input.trim()) return;
 
     try {
-      if (append) {
-        await append({ role: 'user', content: input });
+      if (chatConfig.sendMessage) {
+        await chatConfig.sendMessage({ text: input });
+      } else {
+        console.error('CRITICAL: No sendMessage method found on useChat return object!');
       }
       setInput('');
     } catch (error) {
@@ -38,6 +41,7 @@ export default function Home() {
   };
 
   // Log for debugging
+  console.log('useChat keys:', Object.keys(chatConfig));
   console.log('useChat values (v5 fix):', { input, status, isLoading, messagesLength: messages?.length });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -107,7 +111,7 @@ export default function Home() {
         <footer className="w-full text-center text-[10px] md:text-xs text-white/40 font-mono">
           Powered by Nasa and <span className="font-bold text-blue-400">ColossusLab.tech</span>
           <span className="opacity-20 ml-2">
-            Tools: {messages[messages.length - 1]?.toolInvocations?.length || (messages[messages.length - 1]?.parts ? messages[messages.length - 1].parts.filter((p: any) => p.type === 'tool-invocation').length : 0) || 0}
+            Tools: {(messages[messages.length - 1] as any)?.toolInvocations?.length || (messages[messages.length - 1]?.parts ? messages[messages.length - 1].parts.filter((p: any) => p.type === 'tool-invocation').length : 0) || 0}
           </span>
         </footer>
       </div>

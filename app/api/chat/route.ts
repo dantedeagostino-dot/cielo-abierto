@@ -32,16 +32,20 @@ export async function POST(req: Request) {
 
     const coreMessages: Array<NonNullable<Parameters<typeof streamText>[0]['messages']>[number]> = [];
     for (const m of messages) {
+        // AI SDK 4+ sends `parts` containing objects like {type: 'text', text: '...'} 
+        // older SDks sent a flat `content` string. We handle both fallback scenarios:
+        const extractedContent = m.content || (m.parts && m.parts.length > 0 ? m.parts.map((p: any) => p.text).join('\n') : '');
+
         if (m.role === 'user' || m.role === 'system') {
-            coreMessages.push({ role: m.role, content: m.content });
+            coreMessages.push({ role: m.role, content: extractedContent });
         } else if (m.role === 'assistant') {
             const content: any[] = [];
 
             // Critical fix for Context Pollution: 
             // If the assistant used a tool, we DO NOT push its previous text (apologies, confusion, etc.)
             // We only push the text if it was a pure text response without tools.
-            if (m.content && (!m.toolInvocations || m.toolInvocations.length === 0)) {
-                content.push({ type: 'text', text: m.content });
+            if (extractedContent && (!m.toolInvocations || m.toolInvocations.length === 0)) {
+                content.push({ type: 'text', text: extractedContent });
             }
 
             if (m.toolInvocations) {
