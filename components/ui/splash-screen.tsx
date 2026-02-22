@@ -64,72 +64,144 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
             </div>
 
             <div className="relative flex flex-col items-center">
-                {/* Rocket Container */}
+                {/* Launch Pad Glow */}
+                {!isLaunching && (
+                    <motion.div
+                        className="absolute bottom-[-50px] w-64 h-32 bg-blue-500/10 rounded-full blur-3xl z-0"
+                        animate={{ opacity: [0.5, 0.8, 0.5], scale: [1, 1.1, 1] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                )}
+
+                {/* Rocket Container with Camera Shake during launch */}
                 <motion.div
                     initial={{ y: 0, x: 0 }}
                     animate={
                         isLaunching
                             ? {
-                                y: -1000,
-                                transition: { duration: 1.5, ease: "easeIn" },
+                                y: -1500,
+                                x: [0, -5, 5, -5, 5, 0], // Aggressive shake on launch
+                                transition: { y: { duration: 1.5, ease: [0.5, 0, 1, 1] }, x: { duration: 0.1, repeat: 10 } },
                             }
                             : {
-                                y: [0, -5, 0], // Hover/Idle effect
-                                x: [0, 1, -1, 0], // Subtle vibration
+                                y: [0, -4, 0], // Smooth idle float
+                                x: [0, 0.5, -0.5, 0], // Subtle engine rumble
                                 transition: {
-                                    y: { duration: 2, repeat: Infinity, ease: "easeInOut" },
-                                    x: { duration: 0.1, repeat: Infinity } // Engine rumble
+                                    y: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+                                    x: { duration: 0.05, repeat: Infinity }
                                 }
                             }
                     }
-                    className="relative z-10"
+                    className="relative z-10 flex flex-col items-center"
                 >
-                    {/* Custom Rocket SVG for better verification than Lucide icon */}
-                    <svg
-                        width="100"
-                        height="180"
-                        viewBox="0 0 100 180"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        {/* Rocket Body */}
-                        <path
-                            d="M50 0C30 0 15 30 15 60V100C15 110 50 130 50 130C50 130 85 110 85 100V60C85 30 70 0 50 0Z"
-                            fill="#E2E8F0" // Slate-200
-                        />
-                        {/* Window */}
-                        <circle cx="50" cy="50" r="15" fill="#3B82F6" stroke="#1E293B" strokeWidth="4" />
-                        {/* Fins */}
-                        <path d="M15 90L0 130H30L15 90Z" fill="#EF4444" /> {/* Left Fin - Red */}
-                        <path d="M85 90L100 130H70L85 90Z" fill="#EF4444" /> {/* Right Fin - Red */}
-                        <path d="M40 100H60V130H40V100Z" fill="#475569" /> {/* Center Engine */}
+                    {/* Highly Detailed 3D-styled SVG Rocket */}
+                    <svg width="120" height="200" viewBox="0 0 120 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-2xl">
+                        {/* Shadow underneath */}
+                        <ellipse cx="60" cy="180" rx="30" ry="10" fill="rgba(0,0,0,0.5)" filter="blur(5px)" />
+
+                        {/* Main Body with 3D Gradient */}
+                        <defs>
+                            <linearGradient id="bodyGrad" x1="20" y1="0" x2="100" y2="0">
+                                <stop offset="0%" stopColor="#94A3B8" /> {/* Shadow side */}
+                                <stop offset="30%" stopColor="#F8FAFC" /> {/* Highlight */}
+                                <stop offset="100%" stopColor="#CBD5E1" /> {/* Standard */}
+                            </linearGradient>
+                            <linearGradient id="finGrad" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="#B91C1C" />
+                                <stop offset="100%" stopColor="#EF4444" />
+                            </linearGradient>
+                            <linearGradient id="windowGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#60A5FA" />
+                                <stop offset="100%" stopColor="#1E3A8A" />
+                            </linearGradient>
+                        </defs>
+
+                        {/* Fuselage */}
+                        <path d="M60 10C35 10 25 50 25 120C25 140 35 160 40 170H80C85 160 95 140 95 120C95 50 85 10 60 10Z" fill="url(#bodyGrad)" />
+
+                        {/* Nose Cone Tip */}
+                        <path d="M60 0C55 0 50 5 45 20C55 25 65 25 75 20C70 5 65 0 60 0Z" fill="#334155" />
+
+                        {/* Rivets/Texture Lines */}
+                        <path d="M25 120C40 125 80 125 95 120" stroke="#94A3B8" strokeWidth="2" strokeDasharray="4 4" />
+                        <path d="M25 80C40 85 80 85 95 80" stroke="#94A3B8" strokeWidth="2" />
+
+                        {/* Main Window Frame & Glass */}
+                        <circle cx="60" cy="55" r="18" fill="#1E293B" />
+                        <circle cx="60" cy="55" r="14" fill="url(#windowGrad)" />
+                        <path d="M52 47Q60 40 68 47" stroke="rgba(255,255,255,0.4)" strokeWidth="3" strokeLinecap="round" /> {/* Specular Highlight */}
+
+                        {/* Auxiliary Window */}
+                        <circle cx="60" cy="95" r="8" fill="#1E293B" />
+                        <circle cx="60" cy="95" r="6" fill="url(#windowGrad)" />
+
+                        {/* Wings / Fins */}
+                        <path d="M25 100L5 160C5 170 15 175 25 175V140Z" fill="url(#finGrad)" /> {/* Left Fin */}
+                        <path d="M95 100L115 160C115 170 105 175 95 175V140Z" fill="url(#finGrad)" /> {/* Right Fin */}
+
+                        {/* Center Engine Thruster */}
+                        <path d="M45 170H75V180C75 185 70 190 60 190C50 190 45 185 45 180V170Z" fill="#334155" />
+                        <path d="M50 170H70V175C70 178 65 180 60 180C55 180 50 178 50 175V170Z" fill="#1E293B" />
                     </svg>
 
-                    {/* Flame - Only visible when launching or aggressive idling */}
-                    <motion.div
-                        className="absolute top-[125px] left-1/2 -translate-x-1/2 w-10 origin-top"
-                        animate={
-                            isLaunching
-                                ? { scaleY: [1, 2, 1.5], opacity: [0.8, 1, 0.8] }
-                                : { scaleY: [0.5, 0.8, 0.5], opacity: [0.5, 0.8, 0.5] }
-                        }
-                        transition={{ duration: 0.1, repeat: Infinity }}
-                    >
-                        <svg width="40" height="80" viewBox="0 0 40 80" fill="none">
-                            <path d="M20 80C20 80 0 30 10 0H30C40 30 20 80 20 80Z" fill="#F59E0B" /> {/* Orange Flame */}
-                            <path d="M20 60C20 60 10 30 15 0H25C30 30 20 60 20 60Z" fill="#EF4444" /> {/* Red Core */}
-                        </svg>
-                    </motion.div>
+                    {/* Dynamic High-Energy Exhaust Flames */}
+                    <div className="absolute top-[185px] w-full flex justify-center perspective-[500px]">
+                        {/* Core White-Hot Flame */}
+                        <motion.div
+                            className="absolute w-6 bg-white rounded-full blur-[2px] z-20"
+                            animate={isLaunching ? { height: [40, 80, 50], opacity: [1, 0.8, 1] } : { height: [15, 25, 15], opacity: [0.8, 1, 0.8] }}
+                            transition={{ duration: 0.1, repeat: Infinity }}
+                        />
+                        {/* Inner Yellow Flame */}
+                        <motion.div
+                            className="absolute w-12 bg-yellow-300 rounded-full blur-[4px] z-10"
+                            animate={isLaunching ? { height: [80, 140, 90], opacity: [1, 0.7, 1] } : { height: [30, 45, 30], opacity: [0.6, 0.9, 0.6] }}
+                            transition={{ duration: 0.15, repeat: Infinity }}
+                        />
+                        {/* Outer Orange/Red Flame */}
+                        <motion.div
+                            className="absolute w-20 bg-orange-600 rounded-full blur-[8px] z-0"
+                            animate={isLaunching ? { height: [120, 200, 140], opacity: [0.8, 1, 0.8], width: [80, 90, 80] } : { height: [50, 70, 50], opacity: [0.4, 0.7, 0.4] }}
+                            transition={{ duration: 0.2, repeat: Infinity }}
+                        />
+                    </div>
+
+                    {/* Launch Smoke Particles (Only active on launch) */}
+                    {isLaunching && (
+                        <div className="absolute top-[200px] w-full flex justify-center">
+                            {[...Array(15)].map((_, i) => (
+                                <motion.div
+                                    key={i}
+                                    className="absolute bg-slate-300/80 rounded-full blur-[10px]"
+                                    initial={{ width: 40, height: 40, x: 0, y: 0, opacity: 0.8 }}
+                                    animate={{
+                                        width: [40, 150 + Math.random() * 100],
+                                        height: [40, 150 + Math.random() * 100],
+                                        x: (Math.random() - 0.5) * 300,
+                                        y: Math.random() * 200,
+                                        opacity: [0.8, 0]
+                                    }}
+                                    transition={{ duration: 1.5 + Math.random(), ease: "easeOut" }}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </motion.div>
 
-                {/* Text */}
+                {/* Text Indicator */}
                 <motion.div
-                    className="mt-12 font-mono text-blue-400 text-lg tracking-widest"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 2, repeat: Infinity }}
+                    className="mt-16 relative z-10"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={isLaunching ? { opacity: 0, y: 50, transition: { duration: 0.5 } } : { opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.5 }}
                 >
-                    CONECTANDO CON NASA...
+                    <div className="px-6 py-2 bg-slate-900/50 backdrop-blur-md rounded-full border border-blue-500/30 flex items-center gap-3 shadow-[0_0_15px_rgba(59,130,246,0.3)] text-blue-300 font-mono tracking-widest text-sm">
+                        <span className="relative flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                        </span>
+                        {isLaunching ? 'IGNICIÓN...' : 'INICIALIZANDO SISTEMAS'}
+                    </div>
                 </motion.div>
             </div>
         </motion.div>

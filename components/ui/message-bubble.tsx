@@ -21,7 +21,7 @@ export default function MessageBubble({ role, content, toolInvocations }: Messag
             )}
         >
             {!isUser && (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600/20 text-blue-400">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800/80 border border-slate-600/50 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.3)] backdrop-blur-md">
                     <Bot className="h-5 w-5" />
                 </div>
             )}
@@ -55,10 +55,10 @@ export default function MessageBubble({ role, content, toolInvocations }: Messag
                 {(content || (!hasTools && !content)) && (
                     <div
                         className={cn(
-                            'relative px-5 py-3 shadow-sm',
+                            'relative px-5 py-3 transition-all duration-300',
                             isUser
-                                ? 'bg-blue-600 text-white rounded-2xl rounded-br-none'
-                                : 'bg-slate-800/80 text-slate-100 rounded-2xl rounded-bl-none border border-slate-700/50 backdrop-blur-sm'
+                                ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl rounded-br-sm shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2),0_4px_10px_rgba(59,130,246,0.3)]'
+                                : 'bg-slate-900/60 text-slate-100 rounded-2xl rounded-bl-sm border border-slate-600/30 backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_20px_rgba(0,0,0,0.4)]'
                         )}
                     >
                         <div className="prose prose-invert prose-sm">
@@ -109,7 +109,7 @@ export default function MessageBubble({ role, content, toolInvocations }: Messag
             </div>
 
             {isUser && (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-700 text-slate-300">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600/50 text-slate-300 shadow-md">
                     <User className="h-5 w-5" />
                 </div>
             )}
