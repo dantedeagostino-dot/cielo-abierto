@@ -18,6 +18,10 @@ import { searchPatents } from '@/lib/nasa/techtransfer';
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
+const google = createGoogleGenerativeAI({
+    apiKey: process.env.GOOGLE_API_KEY || '',
+});
+
 export async function POST(req: Request) {
     const { messages } = await req.json();
 
@@ -26,7 +30,7 @@ export async function POST(req: Request) {
         return new Response('Missing GOOGLE_API_KEY environment variable', { status: 500 });
     }
 
-    const coreMessages: any[] = [];
+    const coreMessages: Array<NonNullable<Parameters<typeof streamText>[0]['messages']>[number]> = [];
     for (const m of messages) {
         if (m.role === 'user' || m.role === 'system') {
             coreMessages.push({ role: m.role, content: m.content });
@@ -50,7 +54,9 @@ export async function POST(req: Request) {
                     });
                 }
             }
-            coreMessages.push({ role: 'assistant', content });
+            if (content.length > 0) {
+                coreMessages.push({ role: 'assistant', content });
+            }
 
             if (m.toolInvocations) {
                 const toolResults: any[] = [];
@@ -65,15 +71,11 @@ export async function POST(req: Request) {
                     }
                 }
                 if (toolResults.length > 0) {
-                    coreMessages.push({ role: 'tool', content: toolResults });
+                    coreMessages.push({ role: 'tool', content: toolResults } as any);
                 }
             }
         }
     }
-
-    const google = createGoogleGenerativeAI({
-        apiKey: process.env.GOOGLE_API_KEY,
-    });
 
     const result = await streamText({
         model: google('gemini-2.5-flash'),
@@ -108,8 +110,8 @@ export async function POST(req: Request) {
         - Pon en negrita los términos clave.
         - Usa listas con viñetas cuando sea apropiado.`,
         // Multi-step tool execution logic for AI SDK v6 (replaces maxSteps)
-        stopWhen: (steps: any) => steps.length >= 10,
-        onError: (err: any) => console.error("[STREAM ERROR]", err),
+        stopWhen: ({ steps }) => steps.length >= 10,
+        onError: (err) => console.error("[STREAM ERROR]", err),
 
         tools: {
             getDataFromAPOD: tool({
@@ -117,15 +119,16 @@ export async function POST(req: Request) {
                 parameters: z.object({
                     date: z.string().optional().describe('The date in YYYY-MM-DD format. Defaults to today if not provided.'),
                 }),
-                execute: async (args: any) => {
+                // @ts-ignore: AI SDK Zod mismatch prevents execute overload
+                execute: async (args: { date?: string }) => {
                     const { date } = args;
                     try {
                         return await getAPOD(date);
-                    } catch (e: any) {
-                        return { error: e.message };
+                    } catch (e) {
+                        return { error: (e as Error).message };
                     }
                 },
-            } as any),
+            }),
 
             getAsteroidFeed: tool({
                 description: 'Get a list of asteroids approaching Earth within a date range.',
@@ -133,15 +136,16 @@ export async function POST(req: Request) {
                     startDate: z.string().describe('Start date in YYYY-MM-DD format'),
                     endDate: z.string().describe('End date in YYYY-MM-DD format. Must be within 7 days of startDate.'),
                 }),
-                execute: async (args: any) => {
+                // @ts-ignore: AI SDK Zod mismatch prevents execute overload
+                execute: async (args: { startDate: string, endDate: string }) => {
                     const { startDate, endDate } = args;
                     try {
                         return await getNeoFeed(startDate, endDate);
-                    } catch (e: any) {
-                        return { error: e.message };
+                    } catch (e) {
+                        return { error: (e as Error).message };
                     }
                 },
-            } as any),
+            }),
 
             getMarsPhotos: tool({
                 description: 'Get photos from Mars Rovers (Curiosity, Opportunity, Spirit, Perseverance). To see the Martian landscape, prioritize using NAVCAM or MAST cameras.',
@@ -152,19 +156,19 @@ export async function POST(req: Request) {
                     camera: z.enum(['FHAZ', 'RHAZ', 'MAST', 'CHEMCAM', 'MAHLI', 'MARDI', 'NAVCAM', 'PANCAM', 'MINITES', 'EDL_RUCAM', 'EDL_RDCAM', 'EDL_DDCAM', 'EDL_PUCAM1', 'EDL_PUCAM2', 'NAVCAM_LEFT', 'NAVCAM_RIGHT', 'MCZ_RIGHT', 'MCZ_LEFT', 'FRONT_HAZCAM_LEFT_A', 'FRONT_HAZCAM_RIGHT_A', 'REAR_HAZCAM_LEFT', 'REAR_HAZCAM_RIGHT', 'SHERLOC_WATSON']).optional().describe('Specific camera. Valid cameras: Curiosity (FHAZ, RHAZ, MAST, CHEMCAM, MAHLI, MARDI, NAVCAM), Opportunity/Spirit (FHAZ, RHAZ, NAVCAM, PANCAM, MINITES), Perseverance (FHAZ, RHAZ, NAVCAM_LEFT, NAVCAM_RIGHT, MCZ_RIGHT, MCZ_LEFT, FRONT_HAZCAM_LEFT_A, FRONT_HAZCAM_RIGHT_A, REAR_HAZCAM_LEFT, REAR_HAZCAM_RIGHT, SHERLOC_WATSON). Do not use invalid combinations.'),
                     page: z.number().optional().describe('Page number of results (25 photos per page). Default is 1.'),
                 }),
-
-                execute: async (args: any) => {
+                // @ts-ignore: AI SDK Zod mismatch prevents execute overload
+                execute: async (args: { rover: 'curiosity' | 'opportunity' | 'spirit' | 'perseverance', sol?: number, earth_date?: string, camera?: any, page?: number }) => {
                     const { rover, sol, earth_date, camera, page } = args;
                     if (!rover) {
                         return { error: "You MUST specify the 'rover' parameter (e.g. 'perseverance' or 'curiosity')." };
                     }
                     try {
                         return await getMarsRoverPhotos(rover, sol, earth_date, camera, page);
-                    } catch (e: any) {
-                        return { error: e.message };
+                    } catch (e) {
+                        return { error: (e as Error).message };
                     }
                 },
-            } as any),
+            }),
 
             searchEarthDataCollections: tool({
                 description: 'Search for Earth Science data collections in the Common Metadata Repository (CMR).',
@@ -172,30 +176,32 @@ export async function POST(req: Request) {
                     keyword: z.string().describe('Search keyword (e.g., "temperature", "precipitation", "ozone")'),
                     limit: z.number().optional().default(5).describe('Number of results to return'),
                 }),
-                execute: async (args: any) => {
+                // @ts-ignore: AI SDK Zod mismatch prevents execute overload
+                execute: async (args: { keyword: string, limit?: number }) => {
                     const { keyword, limit } = args;
                     try {
                         return await searchEarthData(keyword, limit);
-                    } catch (e: any) {
-                        return { error: e.message };
+                    } catch (e) {
+                        return { error: (e as Error).message };
                     }
                 },
-            } as any),
+            }),
 
             getEPICImages: tool({
                 description: 'Get recent images of Earth from the DSCOVR satellite (EPIC camera).',
                 parameters: z.object({
                     date: z.string().optional().describe('The date in YYYY-MM-DD format. Defaults to the most recent available date if not provided.'),
                 }),
-                execute: async (args: any) => {
+                // @ts-ignore: AI SDK Zod mismatch prevents execute overload
+                execute: async (args: { date?: string }) => {
                     const { date } = args;
                     try {
                         return await getEPICImages(date);
-                    } catch (e: any) {
-                        return { error: e.message };
+                    } catch (e) {
+                        return { error: (e as Error).message };
                     }
                 },
-            } as any),
+            }),
 
             getNaturalEvents: tool({
                 description: 'Get real-time natural events (wildfires, storms, volcanoes) from EONET.',
@@ -203,15 +209,16 @@ export async function POST(req: Request) {
                     limit: z.number().optional().default(5).describe('Number of events to return'),
                     category: z.string().optional().describe('Category of event (e.g., "wildfires", "severeStorms")'),
                 }),
-                execute: async (args: any) => {
+                // @ts-ignore: AI SDK Zod mismatch prevents execute overload
+                execute: async (args: { limit?: number, category?: string }) => {
                     const { limit, category } = args;
                     try {
                         return await getNaturalEvents(limit, category);
-                    } catch (e: any) {
-                        return { error: e.message };
+                    } catch (e) {
+                        return { error: (e as Error).message };
                     }
                 },
-            } as any),
+            }),
 
             searchImageLibrary: tool({
                 description: 'Search for general space images and videos in the NASA Image and Video Library.',
@@ -219,15 +226,16 @@ export async function POST(req: Request) {
                     q: z.string().describe('Search query (e.g., "Apollo 11", "Andromeda Galaxy")'),
                     mediaType: z.string().optional().default('image').describe('Media type: "image", "video", or "audio"'),
                 }),
-                execute: async (args: any) => {
+                // @ts-ignore: AI SDK Zod mismatch prevents execute overload
+                execute: async (args: { q: string, mediaType?: string }) => {
                     const { q, mediaType } = args;
                     try {
                         return await searchImageLibrary(q, mediaType);
-                    } catch (e: any) {
-                        return { error: e.message };
+                    } catch (e) {
+                        return { error: (e as Error).message };
                     }
                 },
-            } as any),
+            }),
 
             getSpaceWeather: tool({
                 description: 'Get Space Weather notifications (CME, Geomagnetic Storms) from DONKI.',
@@ -236,87 +244,93 @@ export async function POST(req: Request) {
                     startDate: z.string().optional().describe('Start date (YYYY-MM-DD)'),
                     endDate: z.string().optional().describe('End date (YYYY-MM-DD)'),
                 }),
-                execute: async (args: any) => {
+                // @ts-ignore: AI SDK Zod mismatch prevents execute overload
+                execute: async (args: { type: 'CME' | 'GST' | 'FLR', startDate?: string, endDate?: string }) => {
                     const { type, startDate, endDate } = args;
                     try {
                         return await getSpaceWeather(type, startDate, endDate);
-                    } catch (e: any) {
-                        return { error: e.message };
+                    } catch (e) {
+                        return { error: (e as Error).message };
                     }
                 },
-            } as any),
+            }),
 
             queryExoplanets: tool({
                 description: 'Query the NASA Exoplanet Archive for confirmed planets.',
                 parameters: z.object({
                     limit: z.number().optional().default(5).describe('Number of planets to return'),
                 }),
-                execute: async (args: any) => {
+                // @ts-ignore: AI SDK Zod mismatch prevents execute overload
+                execute: async (args: { limit?: number }) => {
                     const { limit } = args;
                     try {
                         return await queryExoplanets(limit);
-                    } catch (e: any) {
-                        return { error: e.message };
+                    } catch (e) {
+                        return { error: (e as Error).message };
                     }
                 },
-            } as any),
+            }),
 
             searchTechProjects: tool({
                 description: 'Search for NASA technology projects (TechPort).',
                 parameters: z.object({
                     query: z.string().describe('Search query (e.g., "propulsion", "robotics")'),
                 }),
-                execute: async (args: any) => {
+                // @ts-ignore: AI SDK Zod mismatch prevents execute overload
+                execute: async (args: { query: string }) => {
                     const { query } = args;
                     try {
                         return await searchTechProjects(query);
-                    } catch (e: any) {
-                        return { error: e.message };
+                    } catch (e) {
+                        return { error: (e as Error).message };
                     }
                 },
-            } as any),
+            }),
 
             getSatelliteTLE: tool({
                 description: 'Get Two-Line Element (TLE) data for a satellite.',
                 parameters: z.object({
                     search: z.string().describe('Satellite name or ID (e.g., "ISS", "NOAA 19")'),
                 }),
-                execute: async (args: any) => {
+                // @ts-ignore: AI SDK Zod mismatch prevents execute overload
+                execute: async (args: { search: string }) => {
                     const { search } = args;
                     try {
                         return await getSatelliteTLE(search);
-                    } catch (e: any) {
-                        return { error: e.message };
+                    } catch (e) {
+                        return { error: (e as Error).message };
                     }
                 },
-            } as any),
+            }),
 
             getMarsWeather: tool({
                 description: 'Get latest weather report from Elysium Planitia, Mars (InSight mission).',
                 parameters: z.object({}),
-                execute: async () => {
+                // @ts-ignore: AI SDK Zod mismatch prevents execute overload
+                execute: async (args: {}) => {
                     try {
                         return await getMarsWeather();
-                    } catch (e: any) {
-                        return { error: e.message };
+                    } catch (e) {
+                        return { error: (e as Error).message };
                     }
                 },
-            } as any),
+            }),
 
             searchPatents: tool({
                 description: 'Search NASA patents and technologies.',
                 parameters: z.object({
                     query: z.string().describe('Search query (e.g., "engine", "solar")'),
                 }),
-                execute: async (args: any) => {
+                // @ts-ignore: AI SDK Zod mismatch prevents execute overload
+                execute: async (args: { query: string }) => {
                     const { query } = args;
                     try {
                         return await searchPatents(query);
-                    } catch (e: any) {
-                        return { error: e.message };
+                    } catch (e) {
+                        return { error: (e as Error).message };
                     }
                 },
-            } as any),
+            }),
         },
     });
 

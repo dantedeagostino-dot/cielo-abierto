@@ -7,13 +7,14 @@ import SpaceBackground from '@/components/ui/space-background';
 import { useRef, useEffect, useState } from 'react';
 import SplashScreen from '@/components/ui/splash-screen';
 import { AnimatePresence, motion } from 'framer-motion';
+import { type UIMessage } from 'ai';
 
 export default function Home() {
   const [showSplash, setShowSplash] = useState(true);
   const { messages, status, sendMessage } = useChat({
     onError: (error) => console.error('[Frontend] useChat error:', error),
     onFinish: (message) => console.log('[Frontend] useChat finished:', message),
-  }) as any;
+  });
   const [input, setInput] = useState('');
 
   const isLoading = status === 'submitted' || status === 'streaming';
@@ -27,7 +28,9 @@ export default function Home() {
     if (!input.trim()) return;
 
     try {
-      await sendMessage({ role: 'user', content: input });
+      if (sendMessage) {
+        await sendMessage({ role: 'user', parts: [{ type: 'text', text: input }] });
+      }
       setInput('');
     } catch (error) {
       console.error('Error sending message:', error);
@@ -76,12 +79,12 @@ export default function Home() {
           </div>
         )}
 
-        {messages?.map((m: any) => (
+        {messages?.map((m: UIMessage) => (
           <MessageBubble
             key={m.id}
             role={m.role === 'user' ? 'user' : 'assistant'}
-            content={m.content ?? m.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('') ?? ''}
-            toolInvocations={m.toolInvocations || m.parts?.filter((p: any) => p.type === 'tool-invocation').map((p: any) => p.toolInvocation)}
+            content={m.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('') ?? ''}
+            toolInvocations={m.parts?.filter((p: any) => p.type === 'tool-invocation').map((p: any) => p.toolInvocation)}
           />
         ))}
 
@@ -104,7 +107,7 @@ export default function Home() {
         <footer className="w-full text-center text-[10px] md:text-xs text-white/40 font-mono">
           Powered by Nasa and <span className="font-bold text-blue-400">ColossusLab.tech</span>
           <span className="opacity-20 ml-2">
-            Tools: {messages[messages.length - 1]?.toolInvocations?.length || 0}
+            Tools: {messages[messages.length - 1]?.parts?.filter((p: any) => p.type === 'tool-invocation').length || 0}
           </span>
         </footer>
       </div>

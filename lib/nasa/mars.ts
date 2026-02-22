@@ -121,7 +121,7 @@ export async function getMarsRoverPhotos(
             feed: 'raw_images',
             category: 'mars2020',
             feedtype: 'json',
-            num: '3',
+            num: '25',
             page: page.toString(),
             order: 'sol desc',
             extended: 'sample_type::full'
@@ -137,7 +137,7 @@ export async function getMarsRoverPhotos(
         // MSL (Curiosity) uses raw_image_items
         const mslParams: Record<string, string> = {
             order: 'sol desc,instrument_sort asc,sample_type_sort asc, date_taken desc',
-            per_page: '3',
+            per_page: '25',
             page: page.toString(),
             condition_1: 'msl:mission',
             extended: 'sample_type::full'
@@ -183,7 +183,7 @@ export async function getMarsRoverPhotos(
         // Let's filter out images that are just thumbnails if the API didn't respect our extended parameter
         photos = photos.filter(p => !p.img_src.includes('-thm'));
 
-        return { photos: getPreferredPhotos(photos).slice(0, 3) };
+        return { photos: getPreferredPhotos(photos) };
     } catch (e) {
         console.error(`[Mars API] Error fetching photos for ${rover}:`, e);
         return { photos: [] };
