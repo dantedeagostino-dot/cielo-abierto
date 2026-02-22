@@ -59,21 +59,29 @@ function getPreferredPhotos(photos: MarsPhoto[]): MarsPhoto[] {
  * Maps the internal NASA `raw_image_items` JSON structure to the standard MarsPhoto interface
  */
 function mapRawImageToMarsPhoto(item: any, rover: RoverName): MarsPhoto {
+    // Perseverance uses 'camera' instead of 'instrument'
+    const cameraInfo = item.camera || item.instrument || {};
+    const cameraName = typeof cameraInfo === 'string' ? cameraInfo : (cameraInfo.filter_name || "UNKNOWN");
+
+    // Perseverance image URL is inside image_files.full_res
+    let imageUrl = item.image_files?.full_res || item.https_url || item.url || "";
+    imageUrl = imageUrl.replace('http://', 'https://');
+
     return {
-        id: parseInt(item.imageid || "0", 10),
+        id: parseInt(item.imageid || item.id || "0", 10),
         sol: parseInt(item.sol || "0", 10),
         camera: {
-            id: 0, // Not provided by raw API
-            name: (item.instrument || "UNKNOWN").toUpperCase(),
+            id: 0,
+            name: cameraName.toUpperCase(),
             rover_id: 0,
-            full_name: item.instrument || "Unknown Camera",
+            full_name: cameraName,
         },
-        img_src: (item.https_url || item.url || "").replace('http://', 'https://'),
+        img_src: imageUrl,
         earth_date: item.date_taken ? item.date_taken.split('T')[0] : "Unknown",
         rover: {
             id: 0,
             name: rover.charAt(0).toUpperCase() + rover.slice(1),
-            landing_date: "Unknown", // Would need hardcoding per rover if strict adherence is needed
+            landing_date: "Unknown",
             launch_date: "Unknown",
             status: "active"
         }
@@ -100,45 +108,56 @@ export async function getMarsRoverPhotos(
         }
     }
 
-    // 2. Map target mission format. Curiosity uses 'msl', Perseverance uses 'm20'.
-    // Opportunity/Spirit are generally not active on this specific internal endpoint in the same way,
-    // but we map the most critical ones used today.
+    // 2. Map target mission format. Curiosity uses 'msl', Perseverance uses a different feed.
     let missionName = rover.toLowerCase();
-    if (missionName === 'curiosity') missionName = 'msl';
-    if (missionName === 'perseverance') missionName = 'm20';
 
-    // Prepare query parameters for the `raw_image_items` endpoint
-    const params: Record<string, string> = {
-        order: 'sol desc,instrument_sort asc,sample_type_sort asc, date_taken desc',
-        per_page: '50',
-        page: page.toString(),
-        condition_1: `${missionName}:mission`
-    };
+    // Prepare query parameters
+    let fullUrl = '';
 
-    // Include only full images if possible (to avoid thumbnails)
-    params.extended = 'sample_type::full';
+    if (missionName === 'perseverance') {
+        const params: Record<string, string> = {
+            feed: 'raw_images',
+            category: 'mars2020',
+            feedtype: 'json',
+            num: '50',
+            page: page.toString(),
+            order: 'sol desc',
+            extended: 'sample_type::full'
+        };
 
-    // The API requires either `sol` OR `earth_date`.
-    // It maps to condition_2 and condition_3
-    let conditionIndex = 2;
+        if (sol !== undefined) params.sol = sol.toString();
+        // The Perseverance feed maps camera natively as 'camera' or expects it in the search.
+        if (camera) params.search = camera;
 
-    if (earthDate) {
-        // Not natively well-supported in this exact format on the internal API without complex date ranges, 
-        // but we can try to filter client side or just fallback to sol.
-        console.warn("[Mars API] Note: earth_date filtering is less precise on the internal API. Using latest available.");
-    } else if (sol !== undefined) {
-        params[`condition_${conditionIndex}`] = `${sol}:sol:in`;
-        conditionIndex++;
-    }
+        const queryParams = new URLSearchParams(params);
+        fullUrl = `https://mars.nasa.gov/rss/api/?${queryParams.toString()}`;
+    } else {
+        // MSL (Curiosity) uses raw_image_items
+        const mslParams: Record<string, string> = {
+            order: 'sol desc,instrument_sort asc,sample_type_sort asc, date_taken desc',
+            per_page: '50',
+            page: page.toString(),
+            condition_1: 'msl:mission',
+            extended: 'sample_type::full'
+        };
 
-    if (camera) {
-        // Map common camera names to the internal abbreviations if needed, though they usually match.
-        params[`condition_${conditionIndex}`] = `${camera.toLowerCase()}:instrument:in`;
+        let conditionIndex = 2;
+        if (earthDate) {
+            console.warn("[Mars API] Note: earth_date filtering is less precise on the internal API.");
+        } else if (sol !== undefined) {
+            mslParams[`condition_${conditionIndex}`] = `${sol}:sol:in`;
+            conditionIndex++;
+        }
+
+        if (camera) {
+            mslParams[`condition_${conditionIndex}`] = `${camera.toLowerCase()}:instrument:in`;
+        }
+
+        const queryParams = new URLSearchParams(mslParams);
+        fullUrl = `https://mars.nasa.gov/api/v1/raw_image_items/?${queryParams.toString()}`;
     }
 
     try {
-        const queryParams = new URLSearchParams(params);
-        const fullUrl = `${MARS_RAW_IMAGE_BASE_URL}?${queryParams.toString()}`;
         console.log(`[Mars API Internal] Fetching: ${fullUrl}`);
 
         const response = await fetch(fullUrl, {
@@ -153,7 +172,9 @@ export async function getMarsRoverPhotos(
         }
 
         const data = await response.json();
-        const rawItems = data.items || [];
+
+        // Perseverance RSS feed returns `{ images: [...] }` instead of `{ items: [...] }`
+        const rawItems = data.images || data.items || [];
 
         let photos: MarsPhoto[] = rawItems.map((item: any) => mapRawImageToMarsPhoto(item, rover));
 
