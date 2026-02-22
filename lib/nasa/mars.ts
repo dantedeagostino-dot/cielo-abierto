@@ -99,6 +99,8 @@ export async function getMarsRoverPhotos(
     page: number = 0 // The internal API uses 0-based indexing for pages
 ): Promise<MarsPhotosResponse> {
 
+    console.log(`[DEBUG Mars] getMarsRoverPhotos called with -> rover=${rover}, sol=${sol}, earthDate=${earthDate}, camera=${camera}, page=${page}`);
+
     // 1. Camera Validation
     if (camera) {
         const validCameras = ROVER_CAMERAS[rover];
@@ -119,7 +121,7 @@ export async function getMarsRoverPhotos(
             feed: 'raw_images',
             category: 'mars2020',
             feedtype: 'json',
-            num: '50',
+            num: '3',
             page: page.toString(),
             order: 'sol desc',
             extended: 'sample_type::full'
@@ -135,7 +137,7 @@ export async function getMarsRoverPhotos(
         // MSL (Curiosity) uses raw_image_items
         const mslParams: Record<string, string> = {
             order: 'sol desc,instrument_sort asc,sample_type_sort asc, date_taken desc',
-            per_page: '50',
+            per_page: '3',
             page: page.toString(),
             condition_1: 'msl:mission',
             extended: 'sample_type::full'
@@ -164,7 +166,7 @@ export async function getMarsRoverPhotos(
             headers: {
                 'User-Agent': 'CieloAbierto/1.0',
             },
-            next: { revalidate: 3600 }
+            next: { revalidate: 0 } // Disable caching while we debug, can set to 300 later
         });
 
         if (!response.ok) {
@@ -181,7 +183,7 @@ export async function getMarsRoverPhotos(
         // Let's filter out images that are just thumbnails if the API didn't respect our extended parameter
         photos = photos.filter(p => !p.img_src.includes('-thm'));
 
-        return { photos: getPreferredPhotos(photos) };
+        return { photos: getPreferredPhotos(photos).slice(0, 3) };
     } catch (e) {
         console.error(`[Mars API] Error fetching photos for ${rover}:`, e);
         return { photos: [] };

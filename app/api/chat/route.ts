@@ -16,6 +16,7 @@ import { getMarsWeather } from '@/lib/nasa/insight';
 import { searchPatents } from '@/lib/nasa/techtransfer';
 
 export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
     const { messages } = await req.json();
@@ -86,6 +87,7 @@ export async function POST(req: Request) {
     - **Cero Repetición:** NO repitas respuestas anteriores, resultados de herramientas (imágenes/datos) ni información de turnos previos. Trata cada pregunta como una consulta enfocada, usando el historial solo como contexto.
     - **Guía al Usuario:** Si no tienes la respuesta o la herramienta necesaria no está disponible, NO alucines ni inventes datos. En su lugar, guía amablemente al usuario explicando qué SÍ PUEDES hacer basándote en las APIs e información que maneja esta plataforma.
     - **Descubrimiento Proactivo:** Si el usuario dice "Hola" o parece indeciso, sugiere qué pueden explorar juntos usando las herramientas disponibles, pero NO llames a las herramientas automáticamente a menos que el usuario lo pida explícitamente.
+    - **Uso de Herramientas:** CUANDO INVOQUES UNA HERRAMIENTA, NO GENERES TEXTO AVISANDO QUE HUBO UN PROBLEMA O QUE NO TIENES LA INFORMACIÓN. Simplemente usa la herramienta en silencio. Solo responde cuando la herramienta te devuelva sus resultados.
     - **Contextualiza (Cuando Aplique):** Al proporcionar datos o imágenes, explica brevemente por qué son importantes sin ser demasiado hablador. Si una herramienta falla, cambia el enfoque hacia la información que sí está disponible.
     
     **Herramientas a tu disposición:**
@@ -107,6 +109,7 @@ export async function POST(req: Request) {
         - Usa listas con viñetas cuando sea apropiado.`,
         // Multi-step tool execution logic for AI SDK v6 (replaces maxSteps)
         stopWhen: (steps: any) => steps.length >= 10,
+        onError: (err: any) => console.error("[STREAM ERROR]", err),
 
         tools: {
             getDataFromAPOD: tool({
@@ -143,7 +146,7 @@ export async function POST(req: Request) {
             getMarsPhotos: tool({
                 description: 'Get photos from Mars Rovers (Curiosity, Opportunity, Spirit, Perseverance). To see the Martian landscape, prioritize using NAVCAM or MAST cameras.',
                 parameters: z.object({
-                    rover: z.enum(['curiosity', 'opportunity', 'spirit', 'perseverance']).optional().default('curiosity').describe('The name of the rover'),
+                    rover: z.enum(['curiosity', 'opportunity', 'spirit', 'perseverance']).describe('The name of the rover. THIS IS REQUIRED.'),
                     sol: z.number().optional().describe('The Martian Sol (day) to fetch photos from. Leave empty for latest if earth_date is not provided.'),
                     earth_date: z.string().optional().describe('The Earth date (YYYY-MM-DD) to fetch photos from. If provided, this overrides sol.'),
                     camera: z.enum(['FHAZ', 'RHAZ', 'MAST', 'CHEMCAM', 'MAHLI', 'MARDI', 'NAVCAM', 'PANCAM', 'MINITES', 'EDL_RUCAM', 'EDL_RDCAM', 'EDL_DDCAM', 'EDL_PUCAM1', 'EDL_PUCAM2', 'NAVCAM_LEFT', 'NAVCAM_RIGHT', 'MCZ_RIGHT', 'MCZ_LEFT', 'FRONT_HAZCAM_LEFT_A', 'FRONT_HAZCAM_RIGHT_A', 'REAR_HAZCAM_LEFT', 'REAR_HAZCAM_RIGHT', 'SHERLOC_WATSON']).optional().describe('Specific camera. Valid cameras: Curiosity (FHAZ, RHAZ, MAST, CHEMCAM, MAHLI, MARDI, NAVCAM), Opportunity/Spirit (FHAZ, RHAZ, NAVCAM, PANCAM, MINITES), Perseverance (FHAZ, RHAZ, NAVCAM_LEFT, NAVCAM_RIGHT, MCZ_RIGHT, MCZ_LEFT, FRONT_HAZCAM_LEFT_A, FRONT_HAZCAM_RIGHT_A, REAR_HAZCAM_LEFT, REAR_HAZCAM_RIGHT, SHERLOC_WATSON). Do not use invalid combinations.'),
@@ -151,7 +154,10 @@ export async function POST(req: Request) {
                 }),
 
                 execute: async (args: any) => {
-                    const { rover = 'curiosity', sol, earth_date, camera, page } = args;
+                    const { rover, sol, earth_date, camera, page } = args;
+                    if (!rover) {
+                        return { error: "You MUST specify the 'rover' parameter (e.g. 'perseverance' or 'curiosity')." };
+                    }
                     try {
                         return await getMarsRoverPhotos(rover, sol, earth_date, camera, page);
                     } catch (e: any) {
