@@ -11,10 +11,10 @@ import { type UIMessage } from 'ai';
 
 export default function Home() {
   const [showSplash, setShowSplash] = useState(true);
-  const { messages, status, sendMessage } = useChat({
+  const { messages, status, append } = useChat({
     onError: (error) => console.error('[Frontend] useChat error:', error),
     onFinish: (message) => console.log('[Frontend] useChat finished:', message),
-  });
+  }) as any;
   const [input, setInput] = useState('');
 
   const isLoading = status === 'submitted' || status === 'streaming';
@@ -28,8 +28,8 @@ export default function Home() {
     if (!input.trim()) return;
 
     try {
-      if (sendMessage) {
-        await sendMessage({ role: 'user', parts: [{ type: 'text', text: input }] });
+      if (append) {
+        await append({ role: 'user', content: input });
       }
       setInput('');
     } catch (error) {
@@ -79,12 +79,12 @@ export default function Home() {
           </div>
         )}
 
-        {messages?.map((m: UIMessage) => (
+        {messages?.map((m: any) => (
           <MessageBubble
             key={m.id}
             role={m.role === 'user' ? 'user' : 'assistant'}
-            content={m.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('') ?? ''}
-            toolInvocations={m.parts?.filter((p: any) => p.type === 'tool-invocation').map((p: any) => p.toolInvocation)}
+            content={m.content || (m.parts ? m.parts.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('') : '') || ''}
+            toolInvocations={m.toolInvocations || (m.parts ? m.parts.filter((p: any) => p.type === 'tool-invocation').map((p: any) => p.toolInvocation) : undefined)}
           />
         ))}
 
@@ -107,7 +107,7 @@ export default function Home() {
         <footer className="w-full text-center text-[10px] md:text-xs text-white/40 font-mono">
           Powered by Nasa and <span className="font-bold text-blue-400">ColossusLab.tech</span>
           <span className="opacity-20 ml-2">
-            Tools: {messages[messages.length - 1]?.parts?.filter((p: any) => p.type === 'tool-invocation').length || 0}
+            Tools: {messages[messages.length - 1]?.toolInvocations?.length || (messages[messages.length - 1]?.parts ? messages[messages.length - 1].parts.filter((p: any) => p.type === 'tool-invocation').length : 0) || 0}
           </span>
         </footer>
       </div>
