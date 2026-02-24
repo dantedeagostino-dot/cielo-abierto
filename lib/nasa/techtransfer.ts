@@ -1,21 +1,13 @@
+import { fetchFromNASA } from './telemetry';
+
 const TECHTRANSFER_BASE_URL = 'https://api.nasa.gov/techtransfer';
 
 export async function searchPatents(query: string): Promise<any[]> {
-    const apiKey = process.env.NASA_API_KEY || 'DEMO_KEY';
-
-    // endpoint: /patent/?q=engine&api_key=DEMO_KEY
-    const response = await fetch(`${TECHTRANSFER_BASE_URL}/patent/?q=${query}&api_key=${apiKey}`, {
+    const data = await fetchFromNASA(`${TECHTRANSFER_BASE_URL}/patent/`, {
+        q: query,
+    }, {
         next: { revalidate: 86400 },
-    });
-
-    if (!response.ok) {
-        throw new Error(`Failed to fetch patents: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    // Structure: { count: 123, results: [[id, code, title, ...], ...] }
-    // We need to map the array results to objects if possible, but the API returns arrays.
-    // Let's just return the raw results or slice them.
+    } as any);
 
     return data.results.slice(0, 5).map((item: any[]) => ({
         id: item[0],

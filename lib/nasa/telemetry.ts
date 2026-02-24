@@ -1,25 +1,37 @@
 
-export async function fetchFromNASA(url: string, params: Record<string, string> = {}, init?: RequestInit) {
+interface FetchOptions extends RequestInit {
+    /** Skip appending NASA API key (for APIs that don't require one) */
+    skipApiKey?: boolean;
+}
+
+export async function fetchFromNASA(url: string, params: Record<string, string> = {}, init?: FetchOptions) {
     const apiKey = process.env.NASA_API_KEY;
     const isDemo = !apiKey || apiKey === 'DEMO_KEY';
+    const skipApiKey = init?.skipApiKey ?? false;
 
-    // Log key usage (masked)
-    console.log(`[NASA API] Using Key: ${isDemo ? 'DEMO_KEY' : (apiKey?.substring(0, 5) + '...')}`);
+    if (!skipApiKey) {
+        console.log(`[NASA API] Using Key: ${isDemo ? 'DEMO_KEY' : (apiKey?.substring(0, 5) + '...')}`);
+    }
 
     const query = new URLSearchParams(params);
-    if (!query.has('api_key')) {
+    if (!skipApiKey && !query.has('api_key')) {
         query.append('api_key', apiKey || 'DEMO_KEY');
     }
 
-    const fullUrl = `${url}?${query.toString()}`;
-    console.log(`[NASA API] Fetching: ${fullUrl.replace(apiKey || 'DEMO_KEY', '***')}`);
+    const queryString = query.toString();
+    const fullUrl = queryString ? `${url}?${queryString}` : url;
+    const maskedUrl = apiKey ? fullUrl.replace(apiKey, '***') : fullUrl;
+    console.log(`[NASA API] Fetching: ${maskedUrl}`);
 
     const startTime = Date.now();
+    // Extract skipApiKey from init so it doesn't get passed to fetch
+    const { skipApiKey: _, ...fetchInit } = init || {};
+
     try {
         const response = await fetch(fullUrl, {
-            ...init,
+            ...fetchInit,
             headers: {
-                ...init?.headers,
+                ...fetchInit?.headers,
                 'User-Agent': 'CieloAbierto/1.0',
             }
         });
@@ -27,7 +39,7 @@ export async function fetchFromNASA(url: string, params: Record<string, string> 
 
         // Telemetry Logging
         console.log('--- [NASA API Telemetry] ---');
-        console.log(`URL: ${fullUrl.replace(apiKey || 'DEMO_KEY', '***')}`);
+        console.log(`URL: ${maskedUrl}`);
         console.log(`Duration: ${duration}ms`);
         console.log(`Status: ${response.status} ${response.statusText}`);
         console.log(`X-RateLimit-Limit: ${response.headers.get('X-RateLimit-Limit')}`);

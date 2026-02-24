@@ -1,3 +1,5 @@
+import { fetchFromNASA } from './telemetry';
+
 const EONET_BASE_URL = 'https://eonet.gsfc.nasa.gov/api/v3/events';
 
 export interface EONETEvent {
@@ -31,23 +33,19 @@ export interface EONETResponse {
 
 export async function getNaturalEvents(limit: number = 10, category?: string): Promise<EONETEvent[]> {
     // EONET does not require an API Key
-    const queryParams = new URLSearchParams({
+    const params: Record<string, string> = {
         limit: limit.toString(),
-        status: 'open', // Only active events
-    });
+        status: 'open',
+    };
 
     if (category) {
-        queryParams.append('category', category);
+        params.category = category;
     }
 
-    const response = await fetch(`${EONET_BASE_URL}?${queryParams.toString()}`, {
+    const data: EONETResponse = await fetchFromNASA(EONET_BASE_URL, params, {
+        skipApiKey: true,
         next: { revalidate: 3600 },
-    });
+    } as any);
 
-    if (!response.ok) {
-        throw new Error(`Failed to fetch EONET events: ${response.statusText}`);
-    }
-
-    const data: EONETResponse = await response.json();
     return data.events;
 }

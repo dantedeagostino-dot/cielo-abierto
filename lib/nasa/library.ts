@@ -1,3 +1,5 @@
+import { fetchFromNASA } from './telemetry';
+
 const LIBRARY_BASE_URL = 'https://images-api.nasa.gov/search';
 
 export interface LibraryItem {
@@ -33,19 +35,13 @@ export interface LibraryResponse {
 
 export async function searchImageLibrary(q: string, mediaType: string = 'image'): Promise<LibraryItem[]> {
     // NASA Image Library does not require an API Key
-    const queryParams = new URLSearchParams({
+    const data: LibraryResponse = await fetchFromNASA(LIBRARY_BASE_URL, {
         q: q,
         media_type: mediaType,
-    });
-
-    const response = await fetch(`${LIBRARY_BASE_URL}?${queryParams.toString()}`, {
+    }, {
+        skipApiKey: true,
         next: { revalidate: 3600 },
-    });
+    } as any);
 
-    if (!response.ok) {
-        throw new Error(`Failed to search NASA Image Library: ${response.statusText}`);
-    }
-
-    const data: LibraryResponse = await response.json();
-    return data.collection.items.slice(0, 10); // Return top 10 results
+    return data.collection.items.slice(0, 10);
 }

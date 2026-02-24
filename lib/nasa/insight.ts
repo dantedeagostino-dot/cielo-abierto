@@ -1,3 +1,5 @@
+import { fetchFromNASA } from './telemetry';
+
 const INSIGHT_BASE_URL = 'https://api.nasa.gov/insight_weather/';
 
 export interface MarsWeather {
@@ -10,23 +12,15 @@ export interface MarsWeather {
 }
 
 export async function getMarsWeather(): Promise<MarsWeather[]> {
-    const apiKey = process.env.NASA_API_KEY || 'DEMO_KEY';
-
-    // ver=1.0, feedtype=json
     // InSight Mission ended in Dec 2022. The API might return 403 Forbidden or be deprecated.
     try {
-        const response = await fetch(`${INSIGHT_BASE_URL}?api_key=${apiKey}&feedtype=json&ver=1.0`, {
+        const data = await fetchFromNASA(INSIGHT_BASE_URL, {
+            feedtype: 'json',
+            ver: '1.0',
+        }, {
             next: { revalidate: 3600 },
-        });
+        } as any);
 
-        if (!response.ok) {
-            if (response.status === 403) {
-                return []; // Return empty array to signal no data without crashing
-            }
-            throw new Error(`Failed to fetch InSight weather: ${response.statusText}`);
-        }
-
-        const data = await response.json();
         const solKeys = data.sol_keys;
 
         return solKeys.map((sol: string) => {
@@ -40,8 +34,13 @@ export async function getMarsWeather(): Promise<MarsWeather[]> {
                 wind_speed: solData.HWS?.av,
             };
         });
-    } catch (error) {
-        console.warn('InSight Weather API is unavailable (likely deprecated):', error);
+    } catch (error: any) {
+        // If 403, return empty array (API deprecated)
+        if (error.message?.includes('403')) {
+            console.warn('InSight Weather API is unavailable (likely deprecated).');
+            return [];
+        }
+        console.warn('InSight Weather API is unavailable:', error);
         return [];
     }
 }

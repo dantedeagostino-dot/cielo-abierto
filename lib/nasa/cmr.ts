@@ -1,3 +1,5 @@
+import { fetchFromNASA } from './telemetry';
+
 export const CMR_BASE_URL = 'https://cmr.earthdata.nasa.gov/search/collections.json';
 
 export interface CMRCollection {
@@ -24,19 +26,10 @@ export interface CMRSearchResponse {
 }
 
 export async function searchEarthData(keyword: string, limit: number = 5): Promise<CMRCollection[]> {
-    const queryParams = new URLSearchParams({
+    const data: CMRSearchResponse = await fetchFromNASA(CMR_BASE_URL, {
         keyword: keyword,
         page_size: limit.toString(),
-    });
+    }, { skipApiKey: true, next: { revalidate: 3600 } } as any);
 
-    const response = await fetch(`${CMR_BASE_URL}?${queryParams.toString()}`, {
-        next: { revalidate: 3600 },
-    });
-
-    if (!response.ok) {
-        throw new Error(`Failed to fetch CMR Data: ${response.statusText}`);
-    }
-
-    const data: CMRSearchResponse = await response.json();
     return data.feed.entry;
 }
