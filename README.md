@@ -13,6 +13,7 @@ El sistema cuenta con herramientas especializadas para acceder a las siguientes 
 | :--- | :--- | :--- | :--- |
 | **Imágenes** | **APOD** | Imagen Astronómica del Día | *"Muéstrame la foto de hoy"* |
 | | **Mars Rovers** | Fotos RAW de Curiosity y Perseverance (via mars.nasa.gov) | *"Últimas fotos de Marte"* |
+| | **Mars Rover Location** | Ubicación GPS en tiempo real de los rovers en Marte + mapa interactivo | *"¿Dónde está Curiosity ahora?"* |
 | | **EPIC** | Cámara Policromática Terrestre (Blue Marble) | *"Imágenes de la Tierra desde el espacio"* |
 | | **Image Library** | Biblioteca General de Imágenes y Videos | *"Busca videos del Apollo 11"* |
 | **Asteroides y Planetas** | **NeoWs** | Objetos Cercanos a la Tierra (Asteroides) | *"¿Hay asteroides peligrosos esta semana?"* |

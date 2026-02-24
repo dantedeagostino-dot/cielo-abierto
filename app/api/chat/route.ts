@@ -17,6 +17,7 @@ import { searchPatents } from '@/lib/nasa/techtransfer';
 import { getCloseApproaches, getFireballs } from '@/lib/nasa/cneos';
 import { getPowerData } from '@/lib/nasa/power';
 import { searchGeneLab } from '@/lib/nasa/genelab';
+import { getRoverLocation } from '@/lib/nasa/rover-location';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -104,6 +105,7 @@ export async function POST(req: Request) {
     - **Asteroids (NeoWs)**: Objetos cercanos a la Tierra.
     - **Close Approach/Fireballs (CNEOS)**: Asteroides que se acercan a la Tierra y bolas de fuego detectadas.
     - **Mars Rovers**: Imágenes reales del planeta rojo. Cuando el usuario pida ver fotos de Marte, SIEMPRE ofrece imágenes de AMBOS rovers (Curiosity Y Perseverance). Incluye en la respuesta: fecha terrestre de la foto, número de Sol marciano, y nombre de la cámara.
+    - **Mars Rover Location**: Ubicación GPS en tiempo real de Curiosity y Perseverance en Marte, incluyendo coordenadas, elevación, distancia total recorrida, y enlace al mapa interactivo de NASA. Cuando muestres la ubicación, incluye el link al mapa interactivo.
     - **Earth Science (CMR/EONET/EPIC)**: La salud de nuestro planeta hogar.
     - **NASA POWER**: Datos solares y meteorológicos de cualquier punto del planeta (temperatura, viento, radiación solar, precipitación).
     - **Library**: Contexto histórico (Apollo, Hubble, etc.).
@@ -406,6 +408,21 @@ export async function POST(req: Request) {
                 execute: async (args: { query: string, size?: number }) => {
                     try {
                         return await searchGeneLab(args.query, args.size);
+                    } catch (e) {
+                        return { error: (e as Error).message };
+                    }
+                },
+            }),
+
+            getRoverLocation: tool({
+                description: 'Get the real-time GPS location, coordinates, elevation, and total distance traveled by a Mars rover (Curiosity or Perseverance). Also provides a link to NASA interactive map.',
+                parameters: z.object({
+                    rover: z.enum(['curiosity', 'perseverance']).describe('Which Mars rover to locate'),
+                }),
+                // @ts-ignore
+                execute: async (args: { rover: 'curiosity' | 'perseverance' }) => {
+                    try {
+                        return await getRoverLocation(args.rover);
                     } catch (e) {
                         return { error: (e as Error).message };
                     }

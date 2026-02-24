@@ -575,6 +575,83 @@ export default function ToolResult({ toolName, result }: { toolName: string; res
         );
     }
 
+    // 18. Mars Rover Location
+    if (toolName === 'getRoverLocation') {
+        const loc = result;
+        if (!loc || loc.error) return <div className="text-xs text-slate-500 italic">{loc?.error || 'No se encontraron datos de ubicación.'}</div>;
+
+        return (
+            <div className="flex flex-col gap-3 my-2 w-full max-w-lg">
+                <div className="p-4 bg-gradient-to-br from-red-900/30 to-slate-900/50 rounded-xl border border-red-500/30">
+                    <div className="flex items-center gap-3 mb-3">
+                        <span className="text-2xl">📍</span>
+                        <div>
+                            <h3 className="font-bold text-red-300 text-sm">{loc.rover} — Sol {loc.sol}</h3>
+                            <p className="text-[10px] text-slate-400">Ubicación en tiempo real en Marte</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs mb-3">
+                        <div className="bg-black/30 rounded-lg p-2.5">
+                            <span className="text-slate-500 text-[10px] block">📐 Coordenadas</span>
+                            <span className="text-white font-mono">{loc.latitude?.toFixed(5)}°, {loc.longitude?.toFixed(5)}°</span>
+                        </div>
+                        <div className="bg-black/30 rounded-lg p-2.5">
+                            <span className="text-slate-500 text-[10px] block">⛰️ Elevación</span>
+                            <span className="text-white font-mono">{loc.elevation?.toFixed(1)} m</span>
+                        </div>
+                        <div className="bg-black/30 rounded-lg p-2.5">
+                            <span className="text-slate-500 text-[10px] block">🛞 Distancia Total</span>
+                            <span className="text-white font-mono">{loc.distanceTotal_km?.toFixed(2)} km ({loc.distanceTotal_mi?.toFixed(2)} mi)</span>
+                        </div>
+                        <div className="bg-black/30 rounded-lg p-2.5">
+                            <span className="text-slate-500 text-[10px] block">↗️ Último Drive</span>
+                            <span className="text-white font-mono">{loc.lastDrive_m?.toFixed(2)} m</span>
+                        </div>
+                    </div>
+
+                    <details className="text-[10px] text-slate-500 mb-3">
+                        <summary className="cursor-pointer hover:text-slate-300 transition-colors">🧭 Datos de Actitud</summary>
+                        <div className="grid grid-cols-4 gap-2 mt-2 text-center">
+                            <div><span className="block text-slate-400">Roll</span><span className="text-slate-200">{loc.roll?.toFixed(1)}°</span></div>
+                            <div><span className="block text-slate-400">Pitch</span><span className="text-slate-200">{loc.pitch?.toFixed(1)}°</span></div>
+                            <div><span className="block text-slate-400">Yaw</span><span className="text-slate-200">{loc.yaw?.toFixed(1)}°</span></div>
+                            <div><span className="block text-slate-400">Tilt</span><span className="text-slate-200">{loc.tilt?.toFixed(1)}°</span></div>
+                        </div>
+                    </details>
+
+                    {loc.mapUrl && (
+                        <a
+                            href={loc.mapUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-xs text-blue-300 hover:text-blue-200 transition-colors bg-blue-900/20 rounded-lg p-2.5 border border-blue-500/20 hover:border-blue-500/40"
+                        >
+                            <ExternalLink size={14} />
+                            <span>Ver mapa interactivo en NASA.gov</span>
+                        </a>
+                    )}
+                </div>
+
+                {loc.panoramaUrl && (
+                    <div className="rounded-xl overflow-hidden border border-red-500/20">
+                        <div className="relative w-full" style={{ paddingBottom: '26.5%' }}>
+                            <img
+                                src={loc.panoramaUrl}
+                                alt={`Panorama ${loc.rover} Sol ${loc.sol}`}
+                                className="absolute inset-0 w-full h-full object-cover"
+                                loading="lazy"
+                            />
+                        </div>
+                        <div className="p-2 bg-black/60 text-[10px] text-slate-400">
+                            🌄 Panorama 360° — Sol {loc.sol}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     // Generic Fallback — collapsible JSON view
     return (
         <details className="text-xs text-slate-500 my-2 max-w-lg">
