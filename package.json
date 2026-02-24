@@ -11,6 +11,7 @@
   "dependencies": {
     "@ai-sdk/google": "^3.0.29",
     "@ai-sdk/react": "^3.0.92",
+    "@vercel/analytics": "^1.6.1",
     "ai": "^6.0.90",
     "clsx": "^2.1.1",
     "framer-motion": "^12.34.1",
