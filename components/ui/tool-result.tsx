@@ -19,9 +19,11 @@ interface ApodResponse {
 
 interface MarsPhoto {
     id: number;
+    sol: number;
     img_src: string;
-    camera: { full_name: string };
+    camera: { name: string; full_name: string };
     earth_date: string;
+    rover: { name: string };
 }
 
 interface EpicImage {
@@ -134,18 +136,21 @@ export default function ToolResult({ toolName, result }: { toolName: string; res
         const photos = result.photos as MarsPhoto[];
         if (!photos || photos.length === 0) return <div className="text-xs text-slate-500 italic">No se encontraron fotos.</div>;
 
-        // Show max 4 photos
-        const displayPhotos = photos.slice(0, 4);
+        const displayPhotos = photos.slice(0, 6);
         return (
-            <div className="grid grid-cols-2 gap-2 my-2 w-full max-w-lg">
-                {displayPhotos.map((photo) => (
-                    <ImageCard
-                        key={photo.id}
-                        src={photo.img_src}
-                        alt={`Mars Rover Photo ${photo.id}`}
-                        caption={`${photo.camera.full_name}`}
-                    />
-                ))}
+            <div className="flex flex-col gap-2 my-2 w-full max-w-lg">
+                <p className="text-xs text-slate-400 font-mono">🔴 {photos[0]?.rover?.name || 'Mars Rover'} — {photos.length} foto(s)</p>
+                <div className="grid grid-cols-2 gap-2">
+                    {displayPhotos.map((photo) => (
+                        <ImageCard
+                            key={photo.id}
+                            src={photo.img_src}
+                            alt={`Mars ${photo.rover?.name} Sol ${photo.sol}`}
+                            caption={`📷 ${photo.camera?.name || photo.camera?.full_name}`}
+                            date={`Sol ${photo.sol} · ${photo.earth_date}`}
+                        />
+                    ))}
+                </div>
             </div>
         );
     }
@@ -444,6 +449,126 @@ export default function ToolResult({ toolName, result }: { toolName: string; res
                         <h4 className="font-bold text-emerald-300 text-sm mb-1">📜 {p.title || 'Patente'}</h4>
                         {p.description && <p className="text-xs text-slate-400 line-clamp-2">{p.description}</p>}
                         {p.type && <span className="text-[10px] text-slate-500 mt-1 block">Tipo: {p.type}</span>}
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    // 14. CNEOS - Close Approaches
+    if (toolName === 'getCloseApproaches') {
+        const data = result.data as any[];
+        if (!data || data.length === 0) return <div className="text-xs text-slate-500 italic">No se encontraron acercamientos cercanos.</div>;
+
+        return (
+            <div className="flex flex-col gap-2 my-2 w-full max-w-lg">
+                <p className="text-xs text-slate-400 font-mono">☄️ {result.count} acercamiento(s) encontrados</p>
+                {data.slice(0, 6).map((item: any, idx: number) => (
+                    <div key={idx} className="p-3 bg-slate-800/50 rounded-lg border border-orange-500/30">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-lg">☄️</span>
+                            <span className="font-bold text-orange-300 text-sm">{item.des || item.designation || 'Objeto'}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1 text-xs text-slate-300">
+                            <span>📅 {item.cd}</span>
+                            <span>📏 {parseFloat(item.dist || 0).toFixed(5)} AU</span>
+                            <span>🚀 {parseFloat(item.v_rel || 0).toFixed(2)} km/s</span>
+                            <span>💡 H={item.h || '—'}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    // 15. CNEOS - Fireballs
+    if (toolName === 'getFireballs') {
+        const data = result.data as any[];
+        if (!data || data.length === 0) return <div className="text-xs text-slate-500 italic">No se encontraron bolas de fuego recientes.</div>;
+
+        return (
+            <div className="flex flex-col gap-2 my-2 w-full max-w-lg">
+                <p className="text-xs text-slate-400 font-mono">🔥 {result.count} bola(s) de fuego detectadas</p>
+                {data.slice(0, 6).map((item: any, idx: number) => (
+                    <div key={idx} className="p-3 bg-slate-800/50 rounded-lg border border-red-500/30">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-lg">🔥</span>
+                            <span className="font-bold text-red-300 text-sm">Fireball</span>
+                            <span className="text-xs text-slate-400">{item.date}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1 text-xs text-slate-300">
+                            <span>💥 {item.energy || '—'} kT</span>
+                            <span>🌐 {item.lat || '—'}° {item['lat-dir'] || ''}, {item.lon || '—'}° {item['lon-dir'] || ''}</span>
+                            {item.vel && <span>🚀 {item.vel} km/s</span>}
+                            {item.alt && <span>⬆️ {item.alt} km alt</span>}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    // 16. NASA POWER
+    if (toolName === 'getNASAPowerData') {
+        const params = result.parameters;
+        if (!params) return <div className="text-xs text-slate-500 italic">No se encontraron datos meteorológicos.</div>;
+
+        const paramNames: Record<string, string> = {
+            T2M: '🌡️ Temp. Media (°C)',
+            T2M_MAX: '🌡️ Temp. Máx (°C)',
+            T2M_MIN: '🌡️ Temp. Mín (°C)',
+            PRECTOTCORR: '🌧️ Precip. (mm)',
+            ALLSKY_SFC_SW_DWN: '☀️ Rad. Solar (kWh/m²)',
+            WS10M: '💨 Viento (m/s)',
+            RH2M: '💧 Humedad (%)',
+        };
+
+        return (
+            <div className="flex flex-col gap-2 my-2 w-full max-w-lg">
+                <p className="text-xs text-slate-400 font-mono">🌍 Datos NASA POWER — {result.timeRange?.start} a {result.timeRange?.end}</p>
+                <p className="text-[10px] text-slate-500">📍 Lat: {result.location?.latitude}° Lon: {result.location?.longitude}°</p>
+                {Object.entries(params).map(([key, values]: [string, any]) => {
+                    const label = paramNames[key] || key;
+                    const entries = Object.entries(values || {}).slice(-7);
+                    return (
+                        <div key={key} className="p-3 bg-slate-800/50 rounded-lg border border-blue-500/30">
+                            <h4 className="font-bold text-blue-300 text-xs mb-2">{label}</h4>
+                            <div className="flex gap-1 text-[10px] text-slate-300 overflow-x-auto">
+                                {entries.map(([date, val]: [string, any]) => (
+                                    <div key={date} className="flex flex-col items-center bg-black/30 rounded px-2 py-1 min-w-[50px]">
+                                        <span className="text-slate-500">{String(date).slice(-4)}</span>
+                                        <span className="font-bold">{val !== -999 ? val : '—'}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
+
+    // 17. GeneLab
+    if (toolName === 'searchGeneLab') {
+        const studies = result.studies as any[];
+        if (!studies || studies.length === 0) return <div className="text-xs text-slate-500 italic">No se encontraron estudios de GeneLab.</div>;
+
+        return (
+            <div className="flex flex-col gap-2 my-2 w-full max-w-lg">
+                <p className="text-xs text-slate-400 font-mono">🧬 {result.total} estudio(s) encontrados</p>
+                {studies.slice(0, 5).map((s: any, idx: number) => (
+                    <div key={s.accession || idx} className="p-3 bg-slate-800/50 rounded-lg border border-purple-500/30">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-lg">🧬</span>
+                            <span className="font-bold text-purple-300 text-sm">{s.accession}</span>
+                        </div>
+                        <h4 className="text-xs text-white mb-1">{s.title}</h4>
+                        <div className="flex flex-wrap gap-2 text-[10px] text-slate-400">
+                            <span>🦠 {s.organism}</span>
+                            <span>🔬 {s.assay_technology_type}</span>
+                            {s.factor_value !== 'N/A' && <span>⚡ {s.factor_value}</span>}
+                        </div>
+                        {s.description && <p className="text-[10px] text-slate-500 mt-1 line-clamp-2">{s.description}</p>}
                     </div>
                 ))}
             </div>

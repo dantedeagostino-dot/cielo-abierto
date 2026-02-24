@@ -14,6 +14,9 @@ import { searchTechProjects } from '@/lib/nasa/techport';
 import { getSatelliteTLE } from '@/lib/nasa/tle';
 import { getMarsWeather } from '@/lib/nasa/insight';
 import { searchPatents } from '@/lib/nasa/techtransfer';
+import { getCloseApproaches, getFireballs } from '@/lib/nasa/cneos';
+import { getPowerData } from '@/lib/nasa/power';
+import { searchGeneLab } from '@/lib/nasa/genelab';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -99,13 +102,16 @@ export async function POST(req: Request) {
     **Herramientas a tu disposición:**
     - **APOD**: Belleza cósmica diaria.
     - **Asteroids (NeoWs)**: Objetos cercanos a la Tierra.
-    - **Mars Rovers**: Ojos reales en el planeta rojo (Curiosity/Perseverance).
+    - **Close Approach/Fireballs (CNEOS)**: Asteroides que se acercan a la Tierra y bolas de fuego detectadas.
+    - **Mars Rovers**: Imágenes reales del planeta rojo. Cuando el usuario pida ver fotos de Marte, SIEMPRE ofrece imágenes de AMBOS rovers (Curiosity Y Perseverance). Incluye en la respuesta: fecha terrestre de la foto, número de Sol marciano, y nombre de la cámara.
     - **Earth Science (CMR/EONET/EPIC)**: La salud de nuestro planeta hogar.
+    - **NASA POWER**: Datos solares y meteorológicos de cualquier punto del planeta (temperatura, viento, radiación solar, precipitación).
     - **Library**: Contexto histórico (Apollo, Hubble, etc.).
     - **Space Weather (DONKI)**: Llamaradas y tormentas solares.
     - **Exoplanets**: Nuevos mundos más allá.
     - **TechPort/Patents**: Innovación de la NASA.
     - **Satellites (TLE)**: Rastreando la humanidad en órbita.
+    - **GeneLab**: Estudios de biología espacial y efectos de la radiación.
 
     **Tono:** Inspirador, científico, amigable y accesible. Usa emojis con moderación pero de forma efectiva.
     - **Formato:**
@@ -331,6 +337,75 @@ export async function POST(req: Request) {
                     const { query } = args;
                     try {
                         return await searchPatents(query);
+                    } catch (e) {
+                        return { error: (e as Error).message };
+                    }
+                },
+            }),
+
+            getCloseApproaches: tool({
+                description: 'Get Close Approach Data — asteroids/comets approaching Earth. From SSD/CNEOS.',
+                parameters: z.object({
+                    dateMin: z.string().optional().describe('Start date (YYYY-MM-DD). Defaults to now.'),
+                    dateMax: z.string().optional().describe('End date (YYYY-MM-DD). Defaults to +60 days.'),
+                    distMax: z.string().optional().default('0.05').describe('Max distance in AU (default 0.05)'),
+                }),
+                // @ts-ignore
+                execute: async (args: { dateMin?: string, dateMax?: string, distMax?: string }) => {
+                    try {
+                        return await getCloseApproaches(args.dateMin, args.dateMax, args.distMax);
+                    } catch (e) {
+                        return { error: (e as Error).message };
+                    }
+                },
+            }),
+
+            getFireballs: tool({
+                description: 'Get Fireball (bolide) events — large meteors detected entering Earth atmosphere.',
+                parameters: z.object({
+                    dateMin: z.string().optional().describe('Start date (YYYY-MM-DD)'),
+                    dateMax: z.string().optional().describe('End date (YYYY-MM-DD)'),
+                    limit: z.number().optional().default(10).describe('Number of events to return'),
+                }),
+                // @ts-ignore
+                execute: async (args: { dateMin?: string, dateMax?: string, limit?: number }) => {
+                    try {
+                        return await getFireballs(args.dateMin, args.dateMax, args.limit);
+                    } catch (e) {
+                        return { error: (e as Error).message };
+                    }
+                },
+            }),
+
+            getNASAPowerData: tool({
+                description: 'Get solar/meteorological satellite data for any point on Earth from NASA POWER. Returns temperature, precipitation, solar radiation, wind, humidity.',
+                parameters: z.object({
+                    latitude: z.number().describe('Latitude (-90 to 90)'),
+                    longitude: z.number().describe('Longitude (-180 to 180)'),
+                    startDate: z.string().describe('Start date in YYYYMMDD format'),
+                    endDate: z.string().describe('End date in YYYYMMDD format'),
+                    category: z.enum(['temperature', 'solar', 'wind', 'precipitation', 'humidity', 'all']).optional().default('all').describe('Data category'),
+                }),
+                // @ts-ignore
+                execute: async (args: { latitude: number, longitude: number, startDate: string, endDate: string, category?: any }) => {
+                    try {
+                        return await getPowerData(args.latitude, args.longitude, args.startDate, args.endDate, args.category);
+                    } catch (e) {
+                        return { error: (e as Error).message };
+                    }
+                },
+            }),
+
+            searchGeneLab: tool({
+                description: 'Search NASA GeneLab for space biology studies and radiation effects research.',
+                parameters: z.object({
+                    query: z.string().describe('Search query (e.g., "space radiation", "microgravity", "bone loss")'),
+                    size: z.number().optional().default(5).describe('Number of results to return'),
+                }),
+                // @ts-ignore
+                execute: async (args: { query: string, size?: number }) => {
+                    try {
+                        return await searchGeneLab(args.query, args.size);
                     } catch (e) {
                         return { error: (e as Error).message };
                     }
